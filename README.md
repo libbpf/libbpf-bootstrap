@@ -1,8 +1,7 @@
 # Building
 
 ```shell
-# check out libbpf
-$ $(cd libbpf && git submodule update --init --recursive)
+$ git submodule update --init --recursive       # check out libbpf
 $ cd src
 $ make
 $ sudo ./bootstrap
