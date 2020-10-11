@@ -25,7 +25,6 @@ will point out to the problem:
 
 ```shell
 $ sudo ./bootstrap -v
-$ sudo ./bootstrap -v
 libbpf: loading object 'bootstrap_bpf' from buffer
 libbpf: elf: section(2) tp/sched/sched_process_exec, size 384, link 0, flags 6, type=1
 libbpf: sec 'tp/sched/sched_process_exec': found program 'handle_exec' at insn offset 0 (0 bytes), code size 48 insns (384 bytes)
