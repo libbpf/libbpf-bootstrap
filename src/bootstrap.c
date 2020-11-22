@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: (LGPL-2.1 OR BSD-2-Clause)
-// Copyright (c) 2020 Facebook
+/* Copyright (c) 2020 Facebook */
 #include <argp.h>
 #include <signal.h>
 #include <stdio.h>
@@ -9,7 +9,7 @@
 #include "bootstrap.h"
 #include "bootstrap.skel.h"
 
-struct env {
+static struct env {
 	bool verbose;
 } env = {
 	.verbose = false,
@@ -48,14 +48,14 @@ static const struct argp argp = {
 	.doc = argp_program_doc,
 };
 
-int libbpf_print_fn(enum libbpf_print_level level, const char *format, va_list args)
+static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va_list args)
 {
 	if (level == LIBBPF_DEBUG && !env.verbose)
 		return 0;
 	return vfprintf(stderr, format, args);
 }
 
-void bump_memlock_rlimit(void)
+static void bump_memlock_rlimit(void)
 {
 	struct rlimit rlim_new = {
 		.rlim_cur	= RLIM_INFINITY,
@@ -75,7 +75,7 @@ static void sig_handler(int sig)
 	exiting = true;
 }
 
-int handle_event(void *ctx, void *data, size_t data_sz)
+static int handle_event(void *ctx, void *data, size_t data_sz)
 {
 	const struct event *e = data;
 	struct tm *tm;
