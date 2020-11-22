@@ -9,7 +9,7 @@ INCLUDES := -I$(OUTPUT)
 CFLAGS := -g -Wall
 ARCH := $(shell uname -m | sed 's/x86_64/x86/')
 
-APPS = bootstrap
+APPS = minimal bootstrap
 
 ifeq ($(V),1)
 	Q =
