@@ -11,19 +11,22 @@
 
 static struct env {
 	bool verbose;
-} env = {
-	.verbose = false,
-};
+	long min_duration_ms;
+} env;
 
 const char *argp_program_version = "bootstrap 0.0";
 const char *argp_program_bug_address = "<bpf@vger.kernel.org>";
 const char argp_program_doc[] =
-"Minimal BPF demo app.\n"
+"BPF bootstrap demo application.\n"
 "\n"
-"USAGE: ./bootstrap [-v]\n";
+"It traces process start and exits and shows associated \n"
+"information (filename, process duration, PID and PPID, etc).\n"
+"\n"
+"USAGE: ./bootstrap [-d <min-duration-ms>] [-v]\n";
 
 static const struct argp_option opts[] = {
 	{ "verbose", 'v', NULL, 0, "Verbose debug output" },
+	{ "duration", 'd', "DURATION-MS", 0, "Minimum process duration (ms) to report" },
 	{},
 };
 
@@ -32,6 +35,14 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 	switch (key) {
 	case 'v':
 		env.verbose = true;
+		break;
+	case 'd':
+		errno = 0;
+		env.min_duration_ms = strtol(arg, NULL, 10);
+		if (errno || env.min_duration_ms <= 0) {
+			fprintf(stderr, "Invalid duration: %s\n", arg);
+			argp_usage(state);
+		}
 		break;
 	case ARGP_KEY_ARG:
 		argp_usage(state);
@@ -87,8 +98,11 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	strftime(ts, sizeof(ts), "%H:%M:%S", tm);
 
 	if (e->exit_event) {
-		printf("%-8s %-5s %-16s %-7d %-7d [%u]\n",
+		printf("%-8s %-5s %-16s %-7d %-7d [%u]",
 		       ts, "EXIT", e->comm, e->pid, e->ppid, e->exit_code);
+		if (e->duration_ns)
+			printf(" (%llums)", e->duration_ns / 1000000);
+		printf("\n");
 	} else {
 		printf("%-8s %-5s %-16s %-7d %-7d %s\n",
 		       ts, "EXEC", e->comm, e->pid, e->ppid, e->filename);
@@ -119,10 +133,20 @@ int main(int argc, char **argv)
 	signal(SIGTERM, sig_handler);
 
 	/* Load and verify BPF application */
-	skel = bootstrap_bpf__open_and_load();
+	skel = bootstrap_bpf__open();
 	if (!skel) {
 		fprintf(stderr, "Failed to open and load BPF skeleton\n");
 		return 1;
+	}
+
+	/* Parameterize BPF code with minimum duration parameter */
+	skel->rodata->min_duration_ns = env.min_duration_ms * 1000000ULL;
+
+	/* Load & verify BPF programs */
+	err = bootstrap_bpf__load(skel);
+	if (err) {
+		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
+		goto cleanup;
 	}
 
 	/* Attach tracepoints */
