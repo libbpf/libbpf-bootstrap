@@ -35,11 +35,19 @@ int main(int argc, char **argv)
 	/* Bump RLIMIT_MEMLOCK to allow BPF sub-system to do anything */
 	bump_memlock_rlimit();
 
-	/* Load and verify BPF application */
-	skel = minimal_bpf__open_and_load();
+/* Load and verify BPF application */
+	skel = minimal_bpf__open();
 	if (!skel) {
 		fprintf(stderr, "Failed to open and load BPF skeleton\n");
 		return 1;
+	}
+
+
+	/* Load & verify BPF programs */
+	err = minimal_bpf__load(skel);
+	if (err) {
+		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
+		goto cleanup;
 	}
 
 	/* ensure BPF program only handles write() syscalls from our process */
