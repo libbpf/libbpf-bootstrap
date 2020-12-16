@@ -35,15 +35,22 @@ int main(int argc, char **argv)
 	/* Bump RLIMIT_MEMLOCK to allow BPF sub-system to do anything */
 	bump_memlock_rlimit();
 
-	/* Load and verify BPF application */
-	skel = minimal_bpf__open_and_load();
+	/* Open BPF application */
+	skel = minimal_bpf__open();
 	if (!skel) {
-		fprintf(stderr, "Failed to open and load BPF skeleton\n");
+		fprintf(stderr, "Failed to open BPF skeleton\n");
 		return 1;
 	}
 
 	/* ensure BPF program only handles write() syscalls from our process */
 	skel->bss->my_pid = getpid();
+
+	/* Load & verify BPF programs */
+	err = minimal_bpf__load(skel);
+	if (err) {
+		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
+		goto cleanup;
+	}
 
 	/* Attach tracepoint handler */
 	err = minimal_bpf__attach(skel);
