@@ -68,6 +68,33 @@ TIME     EVENT COMM             PID     PPID    FILENAME/EXIT CODE
 ...
 ```
 
+## Uprobe
+
+`uprobe` is an example of dealing with user-space entry and exit (return) probes,
+`uprobe` and `uretprobe` in libbpf lingo. It attached `uprobe` and `uretprobe`
+BPF programs to its own function (`uprobe_trigger()`) and logs input arguments
+and return result, respectively, using `bpf_printk()` macro. The user-space
+function is triggered once every second:
+
+```shell
+$ sudo ./uprobe
+libbpf: loading object 'uprobe_bpf' from buffer
+...
+Successfully started!
+...........
+```
+
+You can see `uprobe` demo output in `/sys/kernel/debug/tracing/trace_pipe`:
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+           <...>-461101 [018] d... 505432.345032: bpf_trace_printk: UPROBE ENTRY: a = 0, b = 1
+           <...>-461101 [018] d... 505432.345042: bpf_trace_printk: UPROBE EXIT: return = 1
+           <...>-461101 [018] d... 505433.345186: bpf_trace_printk: UPROBE ENTRY: a = 1, b = 2
+           <...>-461101 [018] d... 505433.345202: bpf_trace_printk: UPROBE EXIT: return = 3
+           <...>-461101 [018] d... 505434.345342: bpf_trace_printk: UPROBE ENTRY: a = 2, b = 3
+           <...>-461101 [018] d... 505434.345367: bpf_trace_printk: UPROBE EXIT: return = 5
+```
+
 # Building
 
 ```shell
