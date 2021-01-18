@@ -95,6 +95,33 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
            <...>-461101 [018] d... 505434.345367: bpf_trace_printk: UPROBE EXIT: return = 5
 ```
 
+# Kprobe
+
+`kprobe` is an example of dealing with kernel-space entry and exit (return)
+probes, `kprobe` and `kretprobe` in libbpf lingo. It attaches `kprobe` and
+`kretprobe` BPF programs to the `bprm_execve` function and logs the PID,
+filename, and return result, respectively, using `bpf_printk()` macro.
+
+```shell
+$ sudo ./kprobe
+libbpf: loading object 'kprobe_bpf' from buffer
+...
+Successfully started!
+...........
+```
+
+The `kprobe` demo output in `/sys/kernel/debug/tracing/trace_pipe` should look
+something like this:
+
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+             cat-3823    [001]   4047.478649: bpf_trace_printk: KPROBE ENTRY pid = 3823, filename = /usr/bin/cat
+             cat-3823    [001]   4047.479141: bpf_trace_printk: KPROBE EXIT: ret = 0
+              i3-3825    [004]   4048.568096: bpf_trace_printk: KPROBE ENTRY pid = 3825, filename = /bin/sh
+              sh-3825    [004]   4048.569349: bpf_trace_printk: KPROBE EXIT: ret = 0
+              sh-3825    [004]   4048.574687: bpf_trace_printk: KPROBE ENTRY pid = 3825, filename = /usr/bin/i3-sensible-terminal
+```
+
 # Building
 
 ```shell
