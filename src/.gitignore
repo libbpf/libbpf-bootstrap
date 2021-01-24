@@ -3,3 +3,4 @@
 /minimal
 /uprobe
 /kprobe
+/fentry
