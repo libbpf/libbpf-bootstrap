@@ -125,6 +125,47 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
               sh-3825    [004]   4048.574687: bpf_trace_printk: KPROBE ENTRY pid = 3825, filename = /usr/bin/i3-sensible-terminal
 ```
 
+# Fentry
+`fentry` is an example that uses fentry and fexit tracing. It attaches `fentry` and `fexit` traces to `bprm_execve`
+which is called by the execve family of functions and logs the return value, PID and filename to the trace pipe.
+Important differences compared to kprobes are improved performance and usability. fentry and fexit programs are available
+starting from 5.5 kernels.
+In this example easier usability is shown with the ability to directly dereference pointer arguments like in normal C,
+instead of using various read helpers.
+If arguments are explicitly listed in a fexit program, then all the input arguments need to be listed
+before the return value, followed by the return value, compared to kretprobes where only
+the return value can be used.
+An alternative would be to use the following form `int my_fentry(void *ctx) { ... }`.
+Due to that, fexit programs can work with input arguments of the function, while kprobe programs can't.
+
+Additionally, as this example attaches to a static kernel function (`bprm_execve`),
+`pahole` v1.19+ should be used to generate the kernel BTF.
+
+```shell
+$ sudo ./fentry
+libbpf: loading object 'fentry_bpf' from buffer
+...
+Successfully started!
+..........
+```
+
+The `fentry` output in `/sys/kernel/debug/tracing/trace_pipe` should look something like this:
+
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+            bash-1878    [005] d..2  1918.958519: bpf_trace_printk: fentry: pid = 1878, filename = /bin/bash
+
+            bash-1878    [005] d..2  1918.958778: bpf_trace_printk: fexit: pid = 1878, filename = /bin/bash, ret = 0
+
+             tty-1879    [003] d..2  1918.961625: bpf_trace_printk: fentry: pid = 1879, filename = /usr/bin/tty
+
+             tty-1879    [003] d..2  1918.961763: bpf_trace_printk: fexit: pid = 1879, filename = /usr/bin/tty, ret = 0
+
+           <...>-1881    [006] d..2  1922.281359: bpf_trace_printk: fentry: pid = 1881, filename = /usr/bin/cat
+
+           <...>-1881    [006] d..2  1922.281749: bpf_trace_printk: fexit: pid = 1881, filename = /usr/bin/cat, ret = 0
+```
+
 # Building
 
 ```shell
