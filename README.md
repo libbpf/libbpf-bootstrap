@@ -95,6 +95,44 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
            <...>-461101 [018] d... 505434.345367: bpf_trace_printk: UPROBE EXIT: return = 5
 ```
 
+# Fentry
+`fentry` is an example that uses fentry and fexit BPF programs for tracing. It
+attaches `fentry` and `fexit` traces to `bprm_execve()` which is called by the
+execve() family of functions and logs the return value, PID, and filename to the
+trace pipe.
+
+Important differences, compared to kprobes, are improved performance and
+usability. In this example, better usability is shown with the ability to
+directly dereference pointer arguments, like in normal C, instead of using
+various read helpers. The big distinction between **fexit** and **kretprobe**
+programs is that fexit one has access to both input arguments and returned
+result, while kprobe can only access the result.
+
+fentry and fexit programs are available starting from 5.5 kernels.
+Additionally, as this example attaches to a static kernel function
+(`bprm_execve`), `pahole` v1.19+ should be used to generate the kernel BTF.
+
+```shell
+$ sudo ./fentry
+libbpf: loading object 'fentry_bpf' from buffer
+...
+Successfully started!
+..........
+```
+
+The `fentry` output in `/sys/kernel/debug/tracing/trace_pipe` should look
+something like this:
+
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+            bash-1878    [005] d..2  1918.958519: bpf_trace_printk: fentry: pid = 1878, filename = /bin/bash
+            bash-1878    [005] d..2  1918.958778: bpf_trace_printk: fexit: pid = 1878, filename = /bin/bash, ret = 0
+             tty-1879    [003] d..2  1918.961625: bpf_trace_printk: fentry: pid = 1879, filename = /usr/bin/tty
+             tty-1879    [003] d..2  1918.961763: bpf_trace_printk: fexit: pid = 1879, filename = /usr/bin/tty, ret = 0
+           <...>-1881    [006] d..2  1922.281359: bpf_trace_printk: fentry: pid = 1881, filename = /usr/bin/cat
+           <...>-1881    [006] d..2  1922.281749: bpf_trace_printk: fexit: pid = 1881, filename = /usr/bin/cat, ret = 0
+```
+
 # Kprobe
 
 `kprobe` is an example of dealing with kernel-space entry and exit (return)
