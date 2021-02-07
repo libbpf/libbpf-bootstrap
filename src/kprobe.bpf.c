@@ -7,21 +7,21 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-SEC("kprobe/bprm_execve")
-int BPF_KPROBE(bprm_execve, struct linux_binprm *bprm, int fd, struct filename *filename, int flags)
+SEC("kprobe/do_unlinkat")
+int BPF_KPROBE(do_unlinkat, int dfd, struct filename *name)
 {
-	const char *name = BPF_CORE_READ(filename, name);
+	const char *filename = BPF_CORE_READ(name, name);
 	pid_t pid;
 
 	pid = bpf_get_current_pid_tgid();
 
-	bpf_printk("KPROBE ENTRY pid = %d, filename = %s\n", pid, name);
+	bpf_printk("KPROBE ENTRY pid = %d, filename = %s\n", pid, filename);
 	return 0;
 }
 
-SEC("kretprobe/bprm_execve")
-int BPF_KRETPROBE(bprm_execve_ret, int ret)
+SEC("kretprobe/do_unlinkat")
+int BPF_KRETPROBE(do_open_execat_exit, long ret)
 {
-	bpf_printk("KPROBE EXIT: ret = %d\n", ret);
+	bpf_printk("KPROBE EXIT: ret = %ld\n", ret);
 	return 0;
 }

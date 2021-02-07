@@ -97,8 +97,8 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 
 # Fentry
 `fentry` is an example that uses fentry and fexit BPF programs for tracing. It
-attaches `fentry` and `fexit` traces to `bprm_execve()` which is called by the
-execve() family of functions and logs the return value, PID, and filename to the
+attaches `fentry` and `fexit` traces to `do_unlinkat()` which is called when a
+file is deleted and logs the return value, PID, and filename to the
 trace pipe.
 
 Important differences, compared to kprobes, are improved performance and
@@ -106,11 +106,9 @@ usability. In this example, better usability is shown with the ability to
 directly dereference pointer arguments, like in normal C, instead of using
 various read helpers. The big distinction between **fexit** and **kretprobe**
 programs is that fexit one has access to both input arguments and returned
-result, while kprobe can only access the result.
+result, while kretprobe can only access the result.
 
 fentry and fexit programs are available starting from 5.5 kernels.
-Additionally, as this example attaches to a static kernel function
-(`bprm_execve`), `pahole` v1.19+ should be used to generate the kernel BTF.
 
 ```shell
 $ sudo ./fentry
@@ -125,19 +123,17 @@ something like this:
 
 ```shell
 $ sudo cat /sys/kernel/debug/tracing/trace_pipe
-            bash-1878    [005] d..2  1918.958519: bpf_trace_printk: fentry: pid = 1878, filename = /bin/bash
-            bash-1878    [005] d..2  1918.958778: bpf_trace_printk: fexit: pid = 1878, filename = /bin/bash, ret = 0
-             tty-1879    [003] d..2  1918.961625: bpf_trace_printk: fentry: pid = 1879, filename = /usr/bin/tty
-             tty-1879    [003] d..2  1918.961763: bpf_trace_printk: fexit: pid = 1879, filename = /usr/bin/tty, ret = 0
-           <...>-1881    [006] d..2  1922.281359: bpf_trace_printk: fentry: pid = 1881, filename = /usr/bin/cat
-           <...>-1881    [006] d..2  1922.281749: bpf_trace_printk: fexit: pid = 1881, filename = /usr/bin/cat, ret = 0
+              rm-9290    [004] d..2  4637.798698: bpf_trace_printk: fentry: pid = 9290, filename = test_file
+              rm-9290    [004] d..2  4637.798843: bpf_trace_printk: fexit: pid = 9290, filename = test_file, ret = 0
+              rm-9290    [004] d..2  4637.798698: bpf_trace_printk: fentry: pid = 9290, filename = test_file2
+              rm-9290    [004] d..2  4637.798843: bpf_trace_printk: fexit: pid = 9290, filename = test_file2, ret = 0
 ```
 
 # Kprobe
 
 `kprobe` is an example of dealing with kernel-space entry and exit (return)
 probes, `kprobe` and `kretprobe` in libbpf lingo. It attaches `kprobe` and
-`kretprobe` BPF programs to the `bprm_execve` function and logs the PID,
+`kretprobe` BPF programs to the `do_unlinkat()` function and logs the PID,
 filename, and return result, respectively, using `bpf_printk()` macro.
 
 ```shell
@@ -153,11 +149,10 @@ something like this:
 
 ```shell
 $ sudo cat /sys/kernel/debug/tracing/trace_pipe
-             cat-3823    [001]   4047.478649: bpf_trace_printk: KPROBE ENTRY pid = 3823, filename = /usr/bin/cat
-             cat-3823    [001]   4047.479141: bpf_trace_printk: KPROBE EXIT: ret = 0
-              i3-3825    [004]   4048.568096: bpf_trace_printk: KPROBE ENTRY pid = 3825, filename = /bin/sh
-              sh-3825    [004]   4048.569349: bpf_trace_printk: KPROBE EXIT: ret = 0
-              sh-3825    [004]   4048.574687: bpf_trace_printk: KPROBE ENTRY pid = 3825, filename = /usr/bin/i3-sensible-terminal
+              rm-9346    [005] d..3  4710.951696: bpf_trace_printk: KPROBE ENTRY pid = 9346, filename = test1
+              rm-9346    [005] d..4  4710.951819: bpf_trace_printk: KPROBE EXIT: ret = 0
+              rm-9346    [005] d..3  4710.951852: bpf_trace_printk: KPROBE ENTRY pid = 9346, filename = test2
+              rm-9346    [005] d..4  4710.951895: bpf_trace_printk: KPROBE EXIT: ret = 0
 ```
 
 # Building
