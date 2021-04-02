@@ -155,6 +155,35 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
               rm-9346    [005] d..4  4710.951895: bpf_trace_printk: KPROBE EXIT: ret = 0
 ```
 
+# Clang requirements
+
+You'll need to have recent enough Clang that support BPF target.
+Clang version 11 or newer is recommended. It should work with 10 as well.
+Some simple BPF programs might be compilable with older versions,
+but you'll quickly run into problems for any non-trivial BPF code.
+Using BPF CO-RE itself requires at least version 10, but is more feature-rich
+starting with version 11.
+
+To check supported architectures of your Clang/LLVM setup:
+
+```shell
+$ llc --version
+LLVM (http://llvm.org/):
+  LLVM version 13.0.0git
+  Optimized build with assertions.
+  Default target: x86_64-unknown-linux-gnu
+  Host CPU: broadwell
+
+  Registered Targets:
+    bpf    - BPF (host endian)
+    bpfeb  - BPF (big endian)
+    bpfel  - BPF (little endian)
+    x86    - 32-bit X86: Pentium-Pro and above
+    x86-64 - 64-bit X86: EM64T and AMD64
+```
+
+Make sure you have `bpf` target in that list.
+
 # Building
 
 ```shell
