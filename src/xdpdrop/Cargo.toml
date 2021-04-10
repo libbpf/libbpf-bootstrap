@@ -1,0 +1,13 @@
+[package]
+name = "xdpdrop"
+version = "0.1.0"
+authors = ["Hengqi Chen <chenhengqi@outlook.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+libc = "0.2"
+libbpf-rs = "0.7.2"
+structopt = "0.3"
