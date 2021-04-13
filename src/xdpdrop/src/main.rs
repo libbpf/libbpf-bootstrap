@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::{thread, time};
 
 use anyhow::{bail, Result};
@@ -8,9 +10,6 @@ use bpf::*;
 
 #[derive(Debug, StructOpt)]
 struct Command {
-    /// Duration to stop this program
-    #[structopt(default_value = "10000")]
-    duration: u64,
     /// Interface index to attach XDP program
     #[structopt(default_value = "0")]
     ifindex: i32,
@@ -38,10 +37,21 @@ fn main() -> Result<()> {
     let open_skel = skel_builder.open()?;
     let mut skel = open_skel.load()?;
     let link = skel.progs().xdp_drop().attach_xdp(opts.ifindex)?;
-    skel.links = XdpdropLinks{
+    skel.links = XdpdropLinks {
         xdp_drop: Some(link),
     };
 
-    thread::sleep(time::Duration::from_millis(opts.duration));
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
+
+    while running.load(Ordering::SeqCst) {
+        eprint!(".");
+        thread::sleep(time::Duration::from_secs(1));
+    }
+
     Ok(())
 }
