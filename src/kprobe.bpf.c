@@ -25,6 +25,6 @@ int BPF_KRETPROBE(do_unlinkat_exit, long ret)
 	pid_t pid;
 
 	pid = bpf_get_current_pid_tgid() >> 32;
-	bpf_printk("KPROBE EXIT: pid=%d, ret = %ld\n", pid, ret);
+	bpf_printk("KPROBE EXIT: pid = %d, ret = %ld\n", pid, ret);
 	return 0;
 }
