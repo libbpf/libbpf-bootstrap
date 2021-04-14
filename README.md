@@ -9,6 +9,7 @@ installs a tracepoint handler which is triggered once every second. It uses
 read `/sys/kernel/debug/tracing/trace_pipe` file as a root:
 
 ```shell
+$ cd examples/c
 $ make minimal
 $ sudo ./minimal
 $ sudo cat /sys/kernel/debug/tracing/trace_pipe
@@ -159,7 +160,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 
 ```shell
 $ git submodule update --init --recursive       # check out libbpf
-$ cd src
+$ cd examples/c
 $ make
 $ sudo ./bootstrap
 TIME     EVENT COMM             PID     PPID    FILENAME/EXIT CODE
