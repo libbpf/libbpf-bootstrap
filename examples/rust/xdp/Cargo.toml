@@ -10,5 +10,5 @@ edition = "2018"
 anyhow = "1.0"
 ctrlc = { version = "3.0", features = ["termination"] }
 libc = "0.2"
-libbpf-rs = { git = "https://github.com/libbpf/libbpf-rs" }
+libbpf-rs = "0.9"
 structopt = "0.3"
