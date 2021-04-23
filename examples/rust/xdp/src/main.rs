@@ -45,8 +45,7 @@ fn main() -> Result<()> {
     let r = running.clone();
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
+    })?;
 
     while running.load(Ordering::SeqCst) {
         eprint!(".");
