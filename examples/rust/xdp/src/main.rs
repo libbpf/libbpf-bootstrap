@@ -33,12 +33,12 @@ fn main() -> Result<()> {
 
     bump_memlock_rlimit()?;
 
-    let skel_builder = XdpdropSkelBuilder::default();
+    let skel_builder = XdppassSkelBuilder::default();
     let open_skel = skel_builder.open()?;
     let mut skel = open_skel.load()?;
-    let link = skel.progs().xdp_drop().attach_xdp(opts.ifindex)?;
-    skel.links = XdpdropLinks {
-        xdp_drop: Some(link),
+    let link = skel.progs().xdp_pass().attach_xdp(opts.ifindex)?;
+    skel.links = XdppassLinks {
+        xdp_pass: Some(link),
     };
 
     let running = Arc::new(AtomicBool::new(true));
