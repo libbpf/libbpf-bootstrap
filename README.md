@@ -97,6 +97,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 ```
 
 # Fentry
+
 `fentry` is an example that uses fentry and fexit BPF programs for tracing. It
 attaches `fentry` and `fexit` traces to `do_unlinkat()` which is called when a
 file is deleted and logs the return value, PID, and filename to the
@@ -156,10 +157,35 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
               rm-9346    [005] d..4  4710.951895: bpf_trace_printk: KPROBE EXIT: ret = 0
 ```
 
+# XDP
+
+`xdp` is an example written in Rust (using libbpf-rs). It attaches to
+the ingress path of networking device and logs the size of each packet,
+returning `XDP_PASS` to allow the packet to be passed up to the kernel’s
+networking stack.
+
+```shell
+$ sudo ./target/release/xdp 1
+..........
+```
+
+The `xdp` output in `/sys/kernel/debug/tracing/trace_pipe` should look
+something like this:
+
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+           <...>-823887  [000] d.s1 602386.079100: bpf_trace_printk: packet size: 75
+           <...>-823887  [000] d.s1 602386.079141: bpf_trace_printk: packet size: 66
+           <...>-2813507 [000] d.s1 602386.696702: bpf_trace_printk: packet size: 77
+           <...>-2813507 [000] d.s1 602386.696735: bpf_trace_printk: packet size: 66
+```
+
 # Building
 
 libbpf-bootstrap supports multiple build systems that do the same thing.
 This serves as a cross reference for folks coming from different backgrounds.
+
+## C Examples
 
 Makefile build:
 
@@ -192,6 +218,23 @@ $ sudo ./bootstrap
 <...>
 ```
 
+## Rust Examples
+
+Install `libbpf-cargo`:
+```shell
+$ cargo install libbpf-cargo
+```
+
+Build using `cargo`:
+```shell
+$ cd examples/rust
+$ cargo libbpf build
+$ cargo libbpf gen
+$ cargo build --release
+$ sudo ./target/release/xdp 1
+<...>
+```
+
 # Troubleshooting
 
 Libbpf debug logs are quire helpful to pinpoint the exact source of problems,
@@ -213,4 +256,3 @@ libbpf: elf: section(4) license, size 13, link 0, flags 3, type=1
 libbpf: license of bootstrap_bpf is Dual BSD/GPL
 ...
 ```
-
