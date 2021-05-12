@@ -218,6 +218,29 @@ $ sudo ./bootstrap
 <...>
 ```
 
+XMake build (Linux):
+
+```shell
+$ cd examples/c
+$ xmake
+$ xmake run bootstrap
+```
+
+XMake build (Android):
+
+```shell
+$ cd examples/c
+$ xmake f -p android
+$ xmake
+```
+
+Install [Xmake](https://github.com/xmake-io/xmake)
+
+```shell
+$ bash <(wget https://xmake.io/shget.text -O -)
+$ source ~/.xmake/profile
+```
+
 ## Rust Examples
 
 Install `libbpf-cargo`:
