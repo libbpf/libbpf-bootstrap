@@ -221,6 +221,7 @@ $ sudo ./bootstrap
 XMake build (Linux):
 
 ```shell
+$ git submodule update --init --recursive       # check out libbpf
 $ cd examples/c
 $ xmake
 $ xmake run bootstrap
@@ -229,6 +230,7 @@ $ xmake run bootstrap
 XMake build (Android):
 
 ```shell
+$ git submodule update --init --recursive       # check out libbpf
 $ cd examples/c
 $ xmake f -p android
 $ xmake
