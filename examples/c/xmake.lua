@@ -3,7 +3,7 @@ add_rules("platform.linux.bpf")
 set_license("GPL-2.0")
 
 add_requires("linux-tools", {configs = {bpftool = true}})
-add_requires("libbpf")
+add_requires("libbpf", {system = false})
 if is_plat("android") then
     add_requires("ndk >=22.x", "argp-standalone")
     set_toolchains("@ndk", {sdkver = "23"})
