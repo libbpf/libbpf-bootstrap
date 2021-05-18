@@ -6,9 +6,6 @@ option("system-libbpf",      {showmenu = true, default = false, description = "U
 option("require-bpftool",    {showmenu = true, default = false, description = "Require bpftool package"})
 
 add_requires("libelf", "zlib")
-if has_config("require-bpftool") then
-    add_requires("linux-tools", {configs = {bpftool = true}})
-end
 if is_plat("android") then
     add_requires("ndk >=22.x", "argp-standalone")
     set_toolchains("@ndk", {sdkver = "23"})
@@ -22,6 +19,7 @@ add_includedirs("../../vmlinux")
 
 -- we can run `xmake f --require-bpftool=y` to pull bpftool from xmake-repo repository
 if has_config("require-bpftool") then
+    add_requires("linux-tools", {configs = {bpftool = true}})
     add_packages("linux-tools")
 else
     before_build(function (target)
