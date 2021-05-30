@@ -10,5 +10,8 @@ edition = "2018"
 anyhow = "1.0"
 ctrlc = { version = "3.0", features = ["termination"] }
 libc = "0.2"
-libbpf-rs = "0.9"
+libbpf-rs = "0.10"
 structopt = "0.3"
+
+[build-dependencies]
+libbpf-cargo = "0.7"

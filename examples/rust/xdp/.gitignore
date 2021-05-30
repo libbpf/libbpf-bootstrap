@@ -1,3 +1,2 @@
-/src/bpf/mod.rs
-/src/bpf/*.skel.rs
+/src/bpf/.output
 /target
