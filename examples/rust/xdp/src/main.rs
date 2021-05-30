@@ -5,8 +5,9 @@ use std::{thread, time};
 use anyhow::{bail, Result};
 use structopt::StructOpt;
 
-mod bpf;
-use bpf::*;
+#[path = "bpf/.output/xdppass.skel.rs"]
+mod xdppass;
+use xdppass::*;
 
 #[derive(Debug, StructOpt)]
 struct Command {
@@ -36,7 +37,7 @@ fn main() -> Result<()> {
     let skel_builder = XdppassSkelBuilder::default();
     let open_skel = skel_builder.open()?;
     let mut skel = open_skel.load()?;
-    let link = skel.progs().xdp_pass().attach_xdp(opts.ifindex)?;
+    let link = skel.progs_mut().xdp_pass().attach_xdp(opts.ifindex)?;
     skel.links = XdppassLinks {
         xdp_pass: Some(link),
     };
