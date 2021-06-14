@@ -253,8 +253,6 @@ $ cargo install libbpf-cargo
 Build using `cargo`:
 ```shell
 $ cd examples/rust
-$ cargo libbpf build
-$ cargo libbpf gen
 $ cargo build --release
 $ sudo ./target/release/xdp 1
 <...>
