@@ -29,7 +29,7 @@ bpftool btf dump file /sys/kernel/btf/vmlinux format c > src/bpf/vmlinux.h
 You can verify whether your kernel was built with BTF enabled:
 
 ```bash
-cat /boot/config-$(uname -a) | grep CONFIG_DEBUG_INFO_BTF
+cat /boot/config-$(uname -r) | grep CONFIG_DEBUG_INFO_BTF
 ```
 
 ## Build
