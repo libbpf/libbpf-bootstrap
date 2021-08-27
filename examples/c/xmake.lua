@@ -73,6 +73,13 @@ target("fentry")
         add_deps("libbpf")
     end
 
+target("uprobe")
+    set_kind("binary")
+    add_files("uprobe*.c")
+    add_packages("linux-headers")
+    if not has_config("system-libbpf") then
+        add_deps("libbpf")
+    end
 
 target("kprobe")
     set_kind("binary")
@@ -82,6 +89,6 @@ target("kprobe")
         add_deps("libbpf")
     end
     if is_plat("android") then
-        -- TODO we need fix vmlinux.h tu support android
+        -- TODO we need fix vmlinux.h to support android
         set_default(false)
     end
