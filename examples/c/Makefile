@@ -3,8 +3,10 @@ OUTPUT := .output
 CLANG ?= clang
 LLVM_STRIP ?= llvm-strip
 BPFTOOL ?= $(abspath ../../tools/bpftool)
-LIBBPF_SRC := $(abspath ../../libbpf/src)
-LIBBPF_OBJ := $(abspath $(OUTPUT)/libbpf.a)
+# LIBBPF_SRC := $(abspath ../../libbpf/src)
+LIBBPF_SRC := /usr/include/bpf
+# LIBBPF_OBJ := $(abspath $(OUTPUT)/libbpf.a)
+LIBBPF_OBJ := /usr/lib64/libbpf.so
 VMLINUX := ../../vmlinux/vmlinux.h
 # Use our own libbpf API headers and Linux UAPI headers distributed with
 # libbpf to avoid dependency on system-wide headers, which could be missing or
@@ -23,7 +25,7 @@ APPS = minimal bootstrap uprobe kprobe fentry
 #
 # Use '-idirafter': Don't interfere with include mechanics except where the
 # build would have failed anyways.
-CLANG_BPF_SYS_INCLUDES = $(shell $(CLANG) -v -E - </dev/null 2>&1 \
+CLANG_BPF_SYS_INCLUDES = $(shell clang -v -E - </dev/null 2>&1 \
 	| sed -n '/<...> search starts here:/,/End of search list./{ s| \(/.*\)|-idirafter \1|p }')
 
 ifeq ($(V),1)
@@ -51,15 +53,15 @@ $(OUTPUT) $(OUTPUT)/libbpf:
 	$(Q)mkdir -p $@
 
 # Build libbpf
-$(LIBBPF_OBJ): $(wildcard $(LIBBPF_SRC)/*.[ch] $(LIBBPF_SRC)/Makefile) | $(OUTPUT)/libbpf
-	$(call msg,LIB,$@)
-	$(Q)$(MAKE) -C $(LIBBPF_SRC) BUILD_STATIC_ONLY=1		      \
-		    OBJDIR=$(dir $@)/libbpf DESTDIR=$(dir $@)		      \
-		    INCLUDEDIR= LIBDIR= UAPIDIR=			      \
-		    install
+# $(LIBBPF_OBJ): $(wildcard $(LIBBPF_SRC)/*.[ch] $(LIBBPF_SRC)/Makefile) | $(OUTPUT)/libbpf
+# 	$(call msg,LIB,$@)
+# 	$(Q)$(MAKE) -C $(LIBBPF_SRC) BUILD_STATIC_ONLY=1		      \
+# 		    OBJDIR=$(dir $@)/libbpf DESTDIR=$(dir $@)		      \
+# 		    INCLUDEDIR= LIBDIR= UAPIDIR=			      \
+# 		    install
 
 # Build BPF code
-$(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(wildcard %.h) $(VMLINUX) | $(OUTPUT)
+$(OUTPUT)/%.bpf.o: %.bpf.c $(wildcard %.h) $(VMLINUX) | $(OUTPUT)
 	$(call msg,BPF,$@)
 	$(Q)$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(ARCH) $(INCLUDES) $(CLANG_BPF_SYS_INCLUDES) -c $(filter %.c,$^) -o $@
 	$(Q)$(LLVM_STRIP) -g $@ # strip useless DWARF info

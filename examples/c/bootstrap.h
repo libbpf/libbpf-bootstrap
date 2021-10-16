@@ -12,8 +12,13 @@ struct event {
 	unsigned exit_code;
 	unsigned long long duration_ns;
 	char comm[TASK_COMM_LEN];
-	char filename[MAX_FILENAME_LEN];
-	bool exit_event;
+
+	// char filename[MAX_FILENAME_LEN];
+	bool mem_event;
+	int page_size;
+	int is_filter;
+	// char filter[TASK_COMM_LEN];
+	bool is_mmap;
 };
 
 #endif /* __BOOTSTRAP_H */
