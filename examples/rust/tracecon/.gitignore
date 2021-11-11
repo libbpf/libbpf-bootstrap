@@ -1,3 +1,2 @@
-src/bpf/.output
-src/bpf/vmlinux.h
-target
+/src/bpf/.output
+/target
