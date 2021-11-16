@@ -14,6 +14,7 @@ else
     set_toolchains("@llvm")
     add_requires("linux-headers")
 end
+set_symbols("debug")
 
 add_includedirs("../../vmlinux")
 
