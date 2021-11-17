@@ -2,6 +2,12 @@ add_rules("mode.release", "mode.debug")
 add_rules("platform.linux.bpf")
 set_license("GPL-2.0")
 
+if xmake.version():satisfies(">=2.5.7 <=2.5.9") then
+    on_load(function (target)
+        raise("xmake(%s) exists bug, please run `xmake update -f 2.5.6` to revert to v2.5.6 version and build it again, xmake v2.6.1 will fix this issue.", xmake.version())
+    end)
+end
+
 option("system-libbpf",      {showmenu = true, default = false, description = "Use system-installed libbpf"})
 option("require-bpftool",    {showmenu = true, default = false, description = "Require bpftool package"})
 
@@ -14,7 +20,6 @@ else
     set_toolchains("@llvm")
     add_requires("linux-headers")
 end
-set_symbols("debug")
 
 add_includedirs("../../vmlinux")
 
