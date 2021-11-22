@@ -11,7 +11,7 @@ VMLINUX := ../../vmlinux/vmlinux.h
 # outdated
 INCLUDES := -I$(OUTPUT) -I../../libbpf/include/uapi -I$(dir $(VMLINUX))
 CFLAGS := -g -Wall
-ARCH := $(shell uname -m | sed 's/x86_64/x86/')
+ARCH := $(shell uname -m | sed 's/x86_64/x86/' | sed 's/aarch64/arm64/' | sed 's/ppc64le/powerpc/' | sed 's/mips.*/mips/')
 
 APPS = minimal bootstrap uprobe kprobe fentry
 
