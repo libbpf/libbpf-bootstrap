@@ -42,8 +42,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	/* ensure BPF program only handles write() syscalls from our process */
-	// skel->bss->my_pid = getpid();
+	if (argc > 1){
+		strcpy(skel->bss->value, argv[1]);
+	}
+
 
 	/* Load & verify BPF programs */
 	err = lsm_bpf__load(skel);
@@ -59,8 +61,7 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	// printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` "
-	      //  "to see output of the BPF programs.\n");
+	printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` ");
 
 	for (;;) {
 		/* trigger our BPF program */

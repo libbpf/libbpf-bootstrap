@@ -1,28 +1,42 @@
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include <errno.h>
+#include <bpf/bpf_core_read.h>
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
+#define	EPERM		 1
 
-SEC("lsm/file_mprotect")
-int BPF_PROG(mprotect_audit, struct vm_area_struct *vma, unsigned long reqprot,
-             unsigned long prot, int ret)
-{
-  /* ret is the return value from the previous BPF program
-   * or 0 if it's the first hook.
-   */
-  if(ret != 0)
-    return ret;
+char value[32];
+pid_t pid_namespace;
 
-  int is_heap;
+static bool isequal(const char *a, const char *b){
+  #pragma unroll
+  for (int i = 0; i < 32; i++){
+    if (a[i] == '\0' && b[i] == '\0')
+      break;
 
-  is_heap = (vma->vm_start >= vma->vm_mm->start_brk &&
-             vma->vm_end <= vma->vm_mm->brk);
-
-  /* Return an -EPERM or write information to the perf events buffer
-   * for auditing
-   */
-  if(is_heap)
-    return -EPERM;
+    if(a[i] != b[i])
+      return false;
+  }
+  return true;
 }
+
+SEC("lsm/bprm_check_security")
+int BPF_PROG(bprm_stuff, struct linux_binprm *bprm, int ret) {
+  struct task_struct *t = (struct task_struct *)bpf_get_current_task();
+  struct ns_common pid_ns = BPF_CORE_READ(t, nsproxy, pid_ns_for_children, ns);
+  if (pid_namespace != pid_ns.inode){
+    return ret;
+  }
+  if (ret != 0)
+    return ret;
+  char filename[32]  ;
+
+  bpf_probe_read_str(&filename, 32, bprm->filename);
+    bool comp = isequal(filename, value);
+    if (comp)
+      return -EPERM;
+
+  return ret;
+}
+
