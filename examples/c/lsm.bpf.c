@@ -7,7 +7,7 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define	EPERM		 1
 
 char value[32];
-pid_t pid_namespace;
+unsigned int pid_namespace;
 
 static bool isequal(const char *a, const char *b){
   #pragma unroll
@@ -25,9 +25,11 @@ SEC("lsm/bprm_check_security")
 int BPF_PROG(bprm_stuff, struct linux_binprm *bprm, int ret) {
   struct task_struct *t = (struct task_struct *)bpf_get_current_task();
   struct ns_common pid_ns = BPF_CORE_READ(t, nsproxy, pid_ns_for_children, ns);
-  if (pid_namespace != pid_ns.inode){
+  if (pid_namespace != pid_ns.inum){
+    bpf_printk("%d %d", pid_namespace, pid_ns.inum);
     return ret;
   }
+  bpf_printk("exec in the container");
   if (ret != 0)
     return ret;
   char filename[32]  ;

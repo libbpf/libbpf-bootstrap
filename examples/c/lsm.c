@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/resource.h>
 #include <bpf/libbpf.h>
+#include <stdlib.h>
 #include "lsm.skel.h"
 
 static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va_list args)
@@ -42,8 +43,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (argc > 1){
+	if (argc > 2){
 		strcpy(skel->bss->value, argv[1]);
+		skel->bss->pid_namespace = (unsigned int)atoi(argv[2]);
 	}
 
 
