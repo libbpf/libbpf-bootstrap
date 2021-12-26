@@ -185,6 +185,10 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 libbpf-bootstrap supports multiple build systems that do the same thing.
 This serves as a cross reference for folks coming from different backgrounds.
 
+## Install Dependencies
+
+You will need `clang`, `libelf` and `zlib` to build the examples.
+
 ## C Examples
 
 Makefile build:
