@@ -12,19 +12,6 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-static void bump_memlock_rlimit(void)
-{
-	struct rlimit rlim_new = {
-		.rlim_cur	= RLIM_INFINITY,
-		.rlim_max	= RLIM_INFINITY,
-	};
-
-	if (setrlimit(RLIMIT_MEMLOCK, &rlim_new)) {
-		fprintf(stderr, "Failed to increase RLIMIT_MEMLOCK limit!\n");
-		exit(1);
-	}
-}
-
 /* Find process's base load address. We use /proc/self/maps for that,
  * searching for the first executable (r-xp) memory mapping:
  *
@@ -66,11 +53,9 @@ int main(int argc, char **argv)
 	long base_addr, uprobe_offset;
 	int err, i;
 
+	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
-
-	/* Bump RLIMIT_MEMLOCK to allow BPF sub-system to do anything */
-	bump_memlock_rlimit();
 
 	/* Load and verify BPF application */
 	skel = uprobe_bpf__open_and_load();
@@ -101,8 +86,8 @@ int main(int argc, char **argv)
 							0 /* self pid */,
 							"/proc/self/exe",
 							uprobe_offset);
-	err = libbpf_get_error(skel->links.uprobe);
-	if (err) {
+	if (!skel->links.uprobe) {
+		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
 		goto cleanup;
 	}
@@ -116,8 +101,8 @@ int main(int argc, char **argv)
 							   -1 /* any pid */,
 							   "/proc/self/exe",
 							   uprobe_offset);
-	err = libbpf_get_error(skel->links.uretprobe);
-	if (err) {
+	if (!skel->links.uretprobe) {
+		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
 		goto cleanup;
 	}
