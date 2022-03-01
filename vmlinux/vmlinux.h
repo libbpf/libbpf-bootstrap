@@ -1,1 +1,1 @@
-vmlinux_508.h
+x86/vmlinux_508.h
