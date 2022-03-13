@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use core::time::Duration;
 use libbpf_rs::PerfBufferBuilder;
 use object::Object;
@@ -46,7 +46,8 @@ fn bump_memlock_rlimit() -> Result<()> {
 
 fn get_symbol_address(so_path: &str, fn_name: &str) -> Result<usize> {
     let path = Path::new(so_path);
-    let buffer = fs::read(path)?;
+    let buffer =
+        fs::read(path).with_context(|| format!("could not read file `{}`", path.display()))?;
     let file = object::File::parse(buffer.as_slice())?;
 
     let mut symbols = file.dynamic_symbols();
