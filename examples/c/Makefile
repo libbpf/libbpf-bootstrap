@@ -2,9 +2,10 @@
 OUTPUT := .output
 CLANG ?= clang
 LLVM_STRIP ?= llvm-strip
-BPFTOOL ?= $(abspath ../../tools/bpftool)
 LIBBPF_SRC := $(abspath ../../libbpf/src)
+BPFTOOL_SRC := $(abspath ../../bpftool/src)
 LIBBPF_OBJ := $(abspath $(OUTPUT)/libbpf.a)
+BPFTOOL ?= $(abspath $(OUTPUT)/bpftool/bpftool)
 ARCH := $(shell uname -m | sed 's/x86_64/x86/' | sed 's/aarch64/arm64/' | sed 's/ppc64le/powerpc/' | sed 's/mips.*/mips/')
 VMLINUX := ../../vmlinux/$(ARCH)/vmlinux.h
 # Use our own libbpf API headers and Linux UAPI headers distributed with
@@ -46,7 +47,7 @@ clean:
 	$(call msg,CLEAN)
 	$(Q)rm -rf $(OUTPUT) $(APPS)
 
-$(OUTPUT) $(OUTPUT)/libbpf:
+$(OUTPUT) $(OUTPUT)/libbpf $(dir $(BPFTOOL)):
 	$(call msg,MKDIR,$@)
 	$(Q)mkdir -p $@
 
@@ -58,6 +59,11 @@ $(LIBBPF_OBJ): $(wildcard $(LIBBPF_SRC)/*.[ch] $(LIBBPF_SRC)/Makefile) | $(OUTPU
 		    INCLUDEDIR= LIBDIR= UAPIDIR=			      \
 		    install
 
+# Build bpftool
+$(BPFTOOL): | $(dir $(BPFTOOL))
+	$(call msg,BPFTOOL,$@)
+	$(Q)$(MAKE) OUTPUT=$(dir $(BPFTOOL)) -C $(BPFTOOL_SRC)
+
 # Build BPF code
 $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(wildcard %.h) $(VMLINUX) | $(OUTPUT)
 	$(call msg,BPF,$@)
@@ -65,7 +71,7 @@ $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(wildcard %.h) $(VMLINUX) | $(OUTPUT)
 	$(Q)$(LLVM_STRIP) -g $@ # strip useless DWARF info
 
 # Generate BPF skeletons
-$(OUTPUT)/%.skel.h: $(OUTPUT)/%.bpf.o | $(OUTPUT)
+$(OUTPUT)/%.skel.h: $(OUTPUT)/%.bpf.o | $(OUTPUT) $(BPFTOOL)
 	$(call msg,GEN-SKEL,$@)
 	$(Q)$(BPFTOOL) gen skeleton $< > $@
 
