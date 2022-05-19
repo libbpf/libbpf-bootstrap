@@ -25,9 +25,20 @@ ExternalProject_Add(libbpf
   STEP_TARGETS build
 )
 
+ExternalProject_Add(bpftool
+  PREFIX bpftool
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../bpftool/src
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND make
+    OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/bpftool/
+  BUILD_IN_SOURCE TRUE
+  INSTALL_COMMAND ""
+  STEP_TARGETS build
+)
+
 # Set BpfObject input parameters -- note this is usually not necessary unless
 # you're in a highly vendored environment (like libbpf-bootstrap)
-set(BPFOBJECT_BPFTOOL_EXE ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/bpftool)
+set(BPFOBJECT_BPFTOOL_EXE ${CMAKE_CURRENT_BINARY_DIR}/bpftool/bpftool)
 set(BPFOBJECT_VMLINUX_H ${CMAKE_CURRENT_SOURCE_DIR}/../../vmlinux/vmlinux.h)
 set(LIBBPF_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libbpf)
 set(LIBBPF_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf.a)
