@@ -4,3 +4,4 @@
 /uprobe
 /kprobe
 /fentry
+/profile

@@ -4,3 +4,6 @@
 [submodule "bpftool"]
 	path = bpftool
 	url = https://github.com/libbpf/bpftool
+[submodule "blazesym"]
+	path = blazesym
+	url = https://github.com/ThinkerYzu1/blazesym.git
