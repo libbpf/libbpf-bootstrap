@@ -13,6 +13,7 @@ VMLINUX := ../../vmlinux/$(ARCH)/vmlinux.h
 # outdated
 INCLUDES := -I$(OUTPUT) -I../../libbpf/include/uapi -I$(dir $(VMLINUX))
 CFLAGS := -g -Wall
+ALL_LDFLAGS := $(LDFLAGS) $(EXTRA_LDFLAGS)
 
 APPS = minimal bootstrap uprobe kprobe fentry
 
@@ -39,6 +40,15 @@ else
 	MAKEFLAGS += --no-print-directory
 endif
 
+define allow-override
+  $(if $(or $(findstring environment,$(origin $(1))),\
+            $(findstring command line,$(origin $(1)))),,\
+    $(eval $(1) = $(2)))
+endef
+
+$(call allow-override,CC,$(CROSS_COMPILE)cc)
+$(call allow-override,LD,$(CROSS_COMPILE)ld)
+
 .PHONY: all
 all: $(APPS)
 
@@ -62,7 +72,7 @@ $(LIBBPF_OBJ): $(wildcard $(LIBBPF_SRC)/*.[ch] $(LIBBPF_SRC)/Makefile) | $(OUTPU
 # Build bpftool
 $(BPFTOOL): | $(dir $(BPFTOOL))
 	$(call msg,BPFTOOL,$@)
-	$(Q)$(MAKE) OUTPUT=$(dir $(BPFTOOL)) -C $(BPFTOOL_SRC)
+	$(Q)$(MAKE) ARCH= CROSS_COMPILE= OUTPUT=$(dir $(BPFTOOL)) -C $(BPFTOOL_SRC)
 
 # Build BPF code
 $(OUTPUT)/%.bpf.o: %.bpf.c $(LIBBPF_OBJ) $(wildcard %.h) $(VMLINUX) | $(OUTPUT)
@@ -85,7 +95,7 @@ $(OUTPUT)/%.o: %.c $(wildcard %.h) | $(OUTPUT)
 # Build application binary
 $(APPS): %: $(OUTPUT)/%.o $(LIBBPF_OBJ) | $(OUTPUT)
 	$(call msg,BINARY,$@)
-	$(Q)$(CC) $(CFLAGS) $^ -lelf -lz -o $@
+	$(Q)$(CC) $(CFLAGS) $^ $(ALL_LDFLAGS) -lelf -lz -o $@
 
 # delete failed targets
 .DELETE_ON_ERROR:
