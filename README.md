@@ -115,6 +115,28 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
            <...>-461101 [018] d... 505434.345367: bpf_trace_printk: UPROBE EXIT: return = 5
 ```
 
+## USDT
+
+`usdt` is an example of dealing with USDT probe. It attaches USDT BPF programs to
+the [libc:setjmp](https://www.gnu.org/software/libc/manual/html_node/Non_002dlocal-Goto-Probes.html) probe, which is triggered by calling `setjmp` in user-space program once per second and logs USDT arguments using `bpf_printk()` macro:
+
+```shell
+$ sudo ./usdt
+libbpf: loading object 'usdt_bpf' from buffer
+...
+Successfully started!
+...........
+```
+
+You can see `usdt` demo output in `/sys/kernel/debug/tracing/trace_pipe`:
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+            usdt-1919077 [005] d..21 537310.886092: bpf_trace_printk: USDT auto attach to libc:setjmp: arg1 = 55d03d6a42a0, arg2 = 0, arg3 = 55d03d65e54e
+            usdt-1919077 [005] d..21 537310.886105: bpf_trace_printk: USDT manual attach to libc:setjmp: arg1 = 55d03d6a42a0, arg2 = 0, arg3 = 55d03d65e54e
+            usdt-1919077 [005] d..21 537311.886214: bpf_trace_printk: USDT auto attach to libc:setjmp: arg1 = 55d03d6a42a0, arg2 = 0, arg3 = 55d03d65e54e
+            usdt-1919077 [005] d..21 537311.886227: bpf_trace_printk: USDT manual attach to libc:setjmp: arg1 = 55d03d6a42a0, arg2 = 0, arg3 = 55d03d65e54e
+```
+
 # Fentry
 
 `fentry` is an example that uses fentry and fexit BPF programs for tracing. It
