@@ -11,7 +11,7 @@ end
 option("system-libbpf",      {showmenu = true, default = false, description = "Use system-installed libbpf"})
 option("require-bpftool",    {showmenu = true, default = false, description = "Require bpftool package"})
 
-add_requires("libelf", "zlib")
+add_requires("elfutils", "zlib")
 if is_plat("android") then
     add_requires("ndk >=22.x", "argp-standalone")
     set_toolchains("@ndk", {sdkver = "23"})
@@ -46,7 +46,7 @@ else
         add_includedirs("../../libbpf/include/uapi", {public = true})
         add_includedirs("$(buildir)", {interface = true})
         add_configfiles("../../libbpf/src/(*.h)", {prefixdir = "bpf"})
-        add_packages("libelf", "zlib")
+        add_packages("elfutils", "zlib")
         if is_plat("android") then
             add_defines("__user=", "__force=", "__poll_t=uint32_t")
         end
