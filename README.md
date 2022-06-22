@@ -20,6 +20,25 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 `minimal` is great as a bare-bones experimental playground to quickly try out
 new ideas or BPF features.
 
+## Minimal_Legacy
+
+This version of `minimal` is modified to allow running on even older kernels
+that do not allow global variables. bpf_printk uses global variables unless
+BPF_NO_GLOBAL_DATA is defined before including bpf_helpers.h. Additionally,
+the global variable my_pid has been replaced with an array of one element to
+hold the process pid.
+
+```
+$ cd examples/c
+$ make minimal_legacy
+$ sudo ./minimal_legacy
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+  minimal_legacy-52030 [001] .... 491227.784078: 0x00000001: BPF triggered from PID 52030.
+  minimal_legacy-52030 [001] .... 491228.840571: 0x00000001: BPF triggered from PID 52030.
+  minimal_legacy-52030 [001] .... 491229.841643: 0x00000001: BPF triggered from PID 52030.
+  minimal_legacy-52030 [001] .... 491230.842432: 0x00000001: BPF triggered from PID 52030.
+```
+
 ## Bootstrap
 
 `bootstrap` is an example of a simple (but realistic) BPF application. It
