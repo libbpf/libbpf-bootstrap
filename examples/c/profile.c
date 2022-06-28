@@ -28,19 +28,19 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 {
 	const struct blazesym_result *result;
 	const struct blazesym_csym *sym;
-	sym_file_cfg cfg;
+	sym_src_cfg src;
 	int i, j;
 
 	if (pid) {
-		cfg.cfg_type = CFG_T_PROCESS;
-		cfg.params.process.pid = pid;
+		src.src_type = SRC_T_PROCESS;
+		src.params.process.pid = pid;
 	} else {
-		cfg.cfg_type = CFG_T_KERNEL;
-		cfg.params.kernel.kallsyms = NULL;
-		cfg.params.kernel.kernel_image = NULL;
+		src.src_type = SRC_T_KERNEL;
+		src.params.kernel.kallsyms = NULL;
+		src.params.kernel.kernel_image = NULL;
 	}
 
-	result = blazesym_symbolize(symbolizer, &cfg, 1, (const uint64_t *)stack, stack_sz);
+	result = blazesym_symbolize(symbolizer, &src, 1, (const uint64_t *)stack, stack_sz);
 
 	for (i = 0; i < stack_sz; i++) {
 		if (!result || result->size <= i || !result->entries[i].size) {
