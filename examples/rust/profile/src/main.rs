@@ -74,16 +74,16 @@ fn attach_perf_event(
 
 // Pid 0 means a kernel space stack.
 fn show_stack_trace(stack: &[u64], symbolizer: &BlazeSymbolizer, pid: u32) {
-    let cfg = if pid == 0 {
-        SymbolFileCfg::Kernel {
+    let src = if pid == 0 {
+        SymbolSrcCfg::Kernel {
             kallsyms: None,
             kernel_image: None,
         }
     } else {
-        SymbolFileCfg::Process { pid: Some(pid) }
+        SymbolSrcCfg::Process { pid: Some(pid) }
     };
 
-    let syms = symbolizer.symbolize(&[cfg], stack);
+    let syms = symbolizer.symbolize(&[src], stack);
     for i in 0..stack.len() {
         if syms.len() <= i || syms[i].len() == 0 {
             println!("  {} [<{:016x}>]", i, stack[i]);
