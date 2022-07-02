@@ -250,7 +250,17 @@ This serves as a cross reference for folks coming from different backgrounds.
 
 ## Install Dependencies
 
-You will need `clang`, `libelf` and `zlib` to build the examples.
+You will need `clang`, `libelf` and `zlib` to build the examples, package names may vary across distros.
+
+On Ubuntu/Debian, you need:
+```shell
+$ apt install clang libelf1 libelf-dev zlib1g-dev
+```
+
+On CentOS/Fedora, you need:
+```shell
+$ dnf install clang elfutils-libelf elfutils-libelf-devel zlib-devel
+```
 
 ## C Examples
 
