@@ -12,45 +12,52 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-/* Find process's base load address. We use /proc/self/maps for that,
- * searching for the first executable (r-xp) memory mapping:
+/*
+ * Taken from https://github.com/torvalds/linux/blob/9b59ec8d50a1f28747ceff9a4f39af5deba9540e/tools/testing/selftests/bpf/trace_helpers.c#L149-L205
  *
- * 5574fd254000-5574fd258000 r-xp 00002000 fd:01 668759                     /usr/bin/cat
- * ^^^^^^^^^^^^                   ^^^^^^^^
- *
- * Subtracting that region's offset (4th column) from its absolute start
- * memory address (1st column) gives us the process's base load address.
+ * See discussion in https://github.com/libbpf/libbpf-bootstrap/pull/90
  */
-static long get_base_addr() {
-	size_t start, offset;
+ssize_t get_uprobe_offset(const void *addr)
+{
+	size_t start, end, base;
 	char buf[256];
+	bool found = false;
 	FILE *f;
 
 	f = fopen("/proc/self/maps", "r");
 	if (!f)
 		return -errno;
 
-	while (fscanf(f, "%zx-%*x %s %zx %*[^\n]\n", &start, buf, &offset) == 3) {
-		if (strcmp(buf, "r-xp") == 0) {
-			fclose(f);
-			return start - offset;
+	while (fscanf(f, "%zx-%zx %s %zx %*[^\n]\n", &start, &end, buf, &base) == 4) {
+		if (buf[2] == 'x' && (uintptr_t)addr >= start && (uintptr_t)addr < end) {
+			found = true;
+			break;
 		}
 	}
 
 	fclose(f);
-	return -1;
+
+	if (!found)
+		return -ESRCH;
+
+	return (uintptr_t)addr - start + base;
 }
 
 /* It's a global function to make sure compiler doesn't inline it. */
-int uprobed_function(int a, int b)
+int uprobed_add(int a, int b)
 {
 	return a + b;
+}
+
+int uprobed_sub(int a, int b)
+{
+	return a - b;
 }
 
 int main(int argc, char **argv)
 {
 	struct uprobe_bpf *skel;
-	long base_addr, uprobe_offset;
+	long uprobe_offset;
 	int err, i;
 
 	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
@@ -64,13 +71,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	base_addr = get_base_addr();
-	if (base_addr < 0) {
-		fprintf(stderr, "Failed to determine process's load address\n");
-		err = base_addr;
-		goto cleanup;
-	}
-
 	/* uprobe/uretprobe expects relative offset of the function to attach
 	 * to. This offset is relateve to the process's base load address. So
 	 * easy way to do this is to take an absolute address of the desired
@@ -78,15 +78,15 @@ int main(int argc, char **argv)
 	 * parse ELF to calculate this function, we'd need to add .text
 	 * section offset and function's offset within .text ELF section.
 	 */
-	uprobe_offset = (long)&uprobed_function - base_addr;
+	uprobe_offset = get_uprobe_offset(&uprobed_add);
 
 	/* Attach tracepoint handler */
-	skel->links.uprobe = bpf_program__attach_uprobe(skel->progs.uprobe,
-							false /* not uretprobe */,
-							0 /* self pid */,
-							"/proc/self/exe",
-							uprobe_offset);
-	if (!skel->links.uprobe) {
+	skel->links.uprobe_add = bpf_program__attach_uprobe(skel->progs.uprobe_add,
+							    false /* not uretprobe */,
+							    0 /* self pid */,
+							    "/proc/self/exe",
+							    uprobe_offset);
+	if (!skel->links.uprobe_add) {
 		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
 		goto cleanup;
@@ -96,14 +96,23 @@ int main(int argc, char **argv)
 	 * processes that use the same binary executable; to do that we need
 	 * to specify -1 as PID, as we do here
 	 */
-	skel->links.uretprobe = bpf_program__attach_uprobe(skel->progs.uretprobe,
-							   true /* uretprobe */,
-							   -1 /* any pid */,
-							   "/proc/self/exe",
-							   uprobe_offset);
-	if (!skel->links.uretprobe) {
+	skel->links.uretprobe_add = bpf_program__attach_uprobe(skel->progs.uretprobe_add,
+							       true /* uretprobe */,
+							       -1 /* any pid */,
+							       "/proc/self/exe",
+							       uprobe_offset);
+	if (!skel->links.uretprobe_add) {
 		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
+		goto cleanup;
+	}
+
+	/* Let libbpf perform auto-attach for uprobe_sub/uretprobe_sub
+	 * NOTICE: we provide path and symbol info in SEC for BPF programs
+	 */
+	err = uprobe_bpf__attach(skel);
+	if (err) {
+		fprintf(stderr, "Failed to auto-attach BPF skeleton: %d\n", err);
 		goto cleanup;
 	}
 
@@ -113,7 +122,8 @@ int main(int argc, char **argv)
 	for (i = 0; ; i++) {
 		/* trigger our BPF programs */
 		fprintf(stderr, ".");
-		uprobed_function(i, i + 1);
+		uprobed_add(i, i + 1);
+		uprobed_sub(i * i, i);
 		sleep(1);
 	}
 
