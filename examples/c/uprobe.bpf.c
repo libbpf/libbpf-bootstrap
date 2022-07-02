@@ -7,16 +7,30 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-SEC("uprobe/func")
-int BPF_KPROBE(uprobe, int a, int b)
+SEC("uprobe")
+int BPF_KPROBE(uprobe_add, int a, int b)
 {
-	bpf_printk("UPROBE ENTRY: a = %d, b = %d\n", a, b);
+	bpf_printk("uprobed_add ENTRY: a = %d, b = %d", a, b);
 	return 0;
 }
 
-SEC("uretprobe/func")
-int BPF_KRETPROBE(uretprobe, int ret)
+SEC("uretprobe")
+int BPF_KRETPROBE(uretprobe_add, int ret)
 {
-	bpf_printk("UPROBE EXIT: return = %d\n", ret);
+	bpf_printk("uprobed_add EXIT: return = %d", ret);
+	return 0;
+}
+
+SEC("uprobe//proc/self/exe:uprobed_sub")
+int BPF_KPROBE(uprobe_sub, int a, int b)
+{
+	bpf_printk("uprobed_sub ENTRY: a = %d, b = %d", a, b);
+	return 0;
+}
+
+SEC("uretprobe//proc/self/exe:uprobed_sub")
+int BPF_KRETPROBE(uretprobe_sub, int ret)
+{
+	bpf_printk("uprobed_sub EXIT: return = %d", ret);
 	return 0;
 }
