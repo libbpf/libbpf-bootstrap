@@ -58,7 +58,7 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 [[package]]
 name = "blazesym"
 version = "0.1.0"
-source = "git+https://github.com/ThinkerYzu1/blazesym.git#045afed552882e621f3aee3d950b367a1afaf7f6"
+source = "git+https://github.com/libbpf/blazesym.git#885b4d5297c1633444317d439b312626920b5486"
 dependencies = [
  "cbindgen",
  "nix 0.24.1",
