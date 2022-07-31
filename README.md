@@ -139,7 +139,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
             usdt-1919077 [005] d..21 537311.886227: bpf_trace_printk: USDT manual attach to libc:setjmp: arg1 = 55d03d6a42a0, arg2 = 0, arg3 = 55d03d65e54e
 ```
 
-# Fentry
+## Fentry
 
 `fentry` is an example that uses fentry and fexit BPF programs for tracing. It
 attaches `fentry` and `fexit` traces to `do_unlinkat()` which is called when a
@@ -174,7 +174,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
               rm-9290    [004] d..2  4637.798843: bpf_trace_printk: fexit: pid = 9290, filename = test_file2, ret = 0
 ```
 
-# Kprobe
+## Kprobe
 
 `kprobe` is an example of dealing with kernel-space entry and exit (return)
 probes, `kprobe` and `kretprobe` in libbpf lingo. It attaches `kprobe` and
@@ -200,7 +200,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
               rm-9346    [005] d..4  4710.951895: bpf_trace_printk: KPROBE EXIT: ret = 0
 ```
 
-# XDP
+## XDP
 
 `xdp` is an example written in Rust (using libbpf-rs). It attaches to
 the ingress path of networking device and logs the size of each packet,
@@ -223,7 +223,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
            <...>-2813507 [000] d.s1 602386.696735: bpf_trace_printk: packet size: 66
 ```
 
-# Profile
+## Profile
 
 `profile` is an example written in Rust and C with BlazeSym. It
 attaches to perf events, sampling on every processor periodically. It
@@ -244,6 +244,21 @@ No Userspace Stack
 ```
 
 C version and Rust version show the same content.  Both of them use BlazeSym to symbolize stacktraces.
+
+## Socket filter
+
+`sockfilter` is an example of monitoring packet and dealing with `__sk_buff`
+structure. It attaches `socket` BPF program to `sock_queue_rcv_skb()` function
+and retrieve information from `BPF_MAP_TYPE_RINGBUF`, then print
+protocol, src IP, src port, dst IP, dst port in standard output.
+Currently, most of the IPv4 protocols defined in `uapi/linux/in.h` are included,
+please check `ipproto_mapping` of `examples/c/sockfilter.c` for the supported protocols.
+
+```shell
+$ sudo ./sockfilter
+interface:lo    protocol: UDP   127.0.0.1:51845(src) -> 127.0.0.1:53(dst)
+interface:lo    protocol: UDP   127.0.0.1:41552(src) -> 127.0.0.1:53(dst)
+```
 
 # Building
 
