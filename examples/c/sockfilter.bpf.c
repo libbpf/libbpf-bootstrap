@@ -7,6 +7,8 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 #include <stddef.h>
+#include "sockfilter.h"
+
 #define IP_MF		0x2000
 #define IP_OFFSET	0x1FFF
 
@@ -17,20 +19,10 @@ struct {
 	__uint(max_entries, 256 * 1024);
 } rb SEC(".maps");
 
-struct so_event {
-	__be32 src_addr;
-	__be32 dst_addr;
-	union {
-		__be32 ports;
-		__be16 port16[2];
-	};
-	__u32 ip_proto;
-	__u32 pkt_type;
-};
-
 static inline int ip_is_fragment(struct __sk_buff *skb, __u32 nhoff)
 {
 	__u16 frag_off;
+
 	bpf_skb_load_bytes(skb, nhoff + offsetof(struct iphdr, frag_off), &frag_off, 2);
 	frag_off = __bpf_ntohs(frag_off);
 	return frag_off & (IP_MF | IP_OFFSET);

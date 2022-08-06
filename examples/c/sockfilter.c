@@ -11,18 +11,8 @@
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "sockfilter.h"
 #include "sockfilter.skel.h"
-
-struct so_event {
-	__be32 src_addr;
-	__be32 dst_addr;
-	union {
-		__be32 ports;
-		__be16 port16[2];
-	};
-	__u32 ip_proto;
-	__u32 pkt_type;
-};
 
 static const char * ipproto_mapping[IPPROTO_MAX] = {
 	[IPPROTO_IP] = "IP",
@@ -52,14 +42,15 @@ static const char * ipproto_mapping[IPPROTO_MAX] = {
 	[IPPROTO_RAW] = "RAW"
 };
 
-static inline int open_raw_sock(const char *name) {
+static inline int open_raw_sock(const char *name)
+{
 	struct sockaddr_ll sll;
 	int sock;
 
 	sock = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK | SOCK_CLOEXEC,
 				htons(ETH_P_ALL));
 	if (sock < 0) {
-		printf("cannot create raw socket\n");
+		fprintf(stderr, "Failed to create raw socket\n");
 		return -1;
 	}
 
@@ -68,7 +59,7 @@ static inline int open_raw_sock(const char *name) {
 	sll.sll_ifindex = if_nametoindex(name);
 	sll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sock, (struct sockaddr *)&sll, sizeof(sll)) < 0) {
-		printf("bind to %s: %s\n", name, strerror(errno));
+		fprintf(stderr, "Failed to bind to %s: %s\n", name, strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -82,7 +73,8 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 }
 
 
-static int handle_event(void *ctx, void *data, size_t data_sz) {
+static int handle_event(void *ctx, void *data, size_t data_sz)
+{
 	const struct so_event *e = data;
 
 	if (e->pkt_type != PACKET_HOST)
@@ -91,7 +83,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 	if (e->ip_proto < 0 || e->ip_proto >= IPPROTO_MAX)
 		return 0;
 
-	printf("protocol: %s\n%s:%d(src) -> %s:%d(dst)\n",
+	printf("protocol: %s\t%s:%d(src) -> %s:%d(dst)\n",
 		ipproto_mapping[e->ip_proto],
 		inet_ntoa((struct in_addr){e->src_addr}),
 		ntohs(e->port16[0]),
@@ -101,7 +93,8 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 	return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 	struct ring_buffer *rb = NULL;
 	struct sockfilter_bpf *skel;
 	int err, prog_fd, sock;
@@ -110,18 +103,11 @@ int main(int argc, char **argv) {
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
 
-	/* Open BPF application */
-	skel = sockfilter_bpf__open();
+	/* Load and verify BPF programs*/
+	skel = sockfilter_bpf__open_and_load();
 	if (!skel) {
-		fprintf(stderr, "Failed to open BPF skeleton\n");
+		fprintf(stderr, "Failed to open and load BPF skeleton\n");
 		return 1;
-	}
-
-	/* Load & verify BPF programs */
-	err = sockfilter_bpf__load(skel);
-	if (err) {
-		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
-		goto cleanup;
 	}
 
 	/* Attach tracepoint handler */
@@ -148,8 +134,7 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	if (setsockopt(sock, SOL_SOCKET, SO_ATTACH_BPF, &prog_fd,
-		sizeof(prog_fd))) {
+	if (setsockopt(sock, SOL_SOCKET, SO_ATTACH_BPF, &prog_fd, sizeof(prog_fd))) {
 		err = -2;
 		fprintf(stderr, "Failed to attach raw socket\n");
 		goto cleanup;
@@ -164,7 +149,7 @@ int main(int argc, char **argv) {
 			break;
 		}
 		if (err < 0) {
-			printf("Error polling perf buffer: %d\n", err);
+			fprintf(stderr, "Error polling perf buffer: %d\n", err);
 			break;
 		}
 		sleep(1);
