@@ -254,8 +254,8 @@ please check `ipproto_mapping` of `examples/c/sockfilter.c` for the supported pr
 
 ```shell
 $ sudo ./sockfilter
-protocol: UDP   127.0.0.1:51845(src) -> 127.0.0.1:53(dst)
-protocol: UDP   127.0.0.1:41552(src) -> 127.0.0.1:53(dst)
+interface:lo    protocol: UDP   127.0.0.1:51845(src) -> 127.0.0.1:53(dst)
+interface:lo    protocol: UDP   127.0.0.1:41552(src) -> 127.0.0.1:53(dst)
 ```
 
 # Building

@@ -59,6 +59,7 @@ int socket_handler(struct __sk_buff *skb)
 	bpf_skb_load_bytes(skb, nhoff + 0, &verlen, 1);
 	bpf_skb_load_bytes(skb, nhoff + ((verlen & 0xF) << 2), &(e->ports), 4);
 	e->pkt_type = skb->pkt_type;
+	e->ifindex = skb->ifindex;
 	bpf_ringbuf_submit(e, 0);
 
 	return skb->len;

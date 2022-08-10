@@ -76,6 +76,7 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 static int handle_event(void *ctx, void *data, size_t data_sz)
 {
 	const struct so_event *e = data;
+	char ifname[IF_NAMESIZE];
 
 	if (e->pkt_type != PACKET_HOST)
 		return 0;
@@ -83,7 +84,11 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	if (e->ip_proto < 0 || e->ip_proto >= IPPROTO_MAX)
 		return 0;
 
-	printf("protocol: %s\t%s:%d(src) -> %s:%d(dst)\n",
+	if (!if_indextoname(e->ifindex, ifname))
+		return 0;
+
+	printf("interface: %s\tprotocol: %s\t%s:%d(src) -> %s:%d(dst)\n",
+		ifname,
 		ipproto_mapping[e->ip_proto],
 		inet_ntoa((struct in_addr){e->src_addr}),
 		ntohs(e->port16[0]),
