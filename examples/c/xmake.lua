@@ -55,6 +55,7 @@ end
 target("minimal")
     set_kind("binary")
     add_files("minimal*.c")
+    remove_files("minimal_legacy*.c")
     add_packages("linux-headers")
     if not has_config("system-libbpf") then
         add_deps("libbpf")
