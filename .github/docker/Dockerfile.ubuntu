@@ -1,0 +1,44 @@
+ARG VERSION="22.04"
+FROM ubuntu:${VERSION}
+
+ARG LLVM_VERSION="14"
+ENV LLVM_VERSION=$LLVM_VERSION
+
+ARG SHORTNAME="jammy"
+
+RUN apt-get update && apt-get install -y curl gnupg
+RUN if [ "${LLVM_VERSION}" = "16" ]; \
+    then \
+        echo "\n\
+deb http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME} main\n\
+deb-src http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME} main\n\
+"  >> /etc/apt/sources.list;\
+    else \
+        echo "\n\
+deb http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME}-${LLVM_VERSION} main\n\
+deb-src http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME}-${LLVM_VERSION} main\n\
+"  >> /etc/apt/sources.list; \
+    fi
+RUN curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+
+ARG DEBIAN_FRONTEND="noninteractive"
+ENV TZ="Etc/UTC"
+
+RUN apt-get update && apt-get install -y \
+      libelf-dev \
+      zlib1g-dev \
+      libbfd-dev \
+      clang-${LLVM_VERSION} \
+      libclang-${LLVM_VERSION}-dev \
+      libclang-common-${LLVM_VERSION}-dev \
+      libclang1-${LLVM_VERSION} \
+      llvm-${LLVM_VERSION} \
+      llvm-${LLVM_VERSION}-dev \
+      llvm-${LLVM_VERSION}-runtime \
+      libllvm${LLVM_VERSION} \
+      make pkg-config \
+      rustc cargo rustfmt \
+      sudo \
+      && apt-get -y clean
+
+RUN ln -s /usr/bin/clang-${LLVM_VERSION} /usr/bin/clang && ln -s /usr/bin/llvm-strip-${LLVM_VERSION} /usr/bin/llvm-strip

@@ -1,0 +1,40 @@
+name: libbpf-bootstrap build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build_libbpf_bootstrap:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [14, 15, 16]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Build container
+      uses: docker/build-push-action@v3
+      with:
+        push: false
+        build-args: LLVM_VERSION=${{ matrix.llvm }}
+        file: ./.github/docker/Dockerfile.ubuntu
+        tags: build_container
+    - name: Build examples/c
+      run: |
+        docker run \
+          -v $(pwd):/libbpf-bootstrap \
+          build_container \
+          /bin/bash -c \
+          'cd /libbpf-bootstrap/examples/c && make'
+    - name: Build examples/rust
+      run: |
+        docker run \
+          -v $(pwd):/libbpf-bootstrap \
+          build_container \
+          /bin/bash -c \
+          'cd /libbpf-bootstrap/examples/rust && cargo build'
