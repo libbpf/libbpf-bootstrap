@@ -54,7 +54,15 @@ end
 
 target("minimal")
     set_kind("binary")
-    add_files("minimal*.c")
+    add_files("minimal.c", "minimal.bpf.c")
+    add_packages("linux-headers")
+    if not has_config("system-libbpf") then
+        add_deps("libbpf")
+    end
+
+target("minimal_legacy")
+    set_kind("binary")
+    add_files("minimal_legacy.c", "minimal_legacy.bpf.c")
     add_packages("linux-headers")
     if not has_config("system-libbpf") then
         add_deps("libbpf")
@@ -62,7 +70,7 @@ target("minimal")
 
 target("bootstrap")
     set_kind("binary")
-    add_files("bootstrap*.c")
+    add_files("bootstrap.c", "bootstrap.bpf.c")
     add_packages("linux-headers")
     if not has_config("system-libbpf") then
         add_deps("libbpf")
@@ -73,7 +81,7 @@ target("bootstrap")
 
 target("fentry")
     set_kind("binary")
-    add_files("fentry*.c")
+    add_files("fentry.c", "fentry.bpf.c")
     add_packages("linux-headers")
     if not has_config("system-libbpf") then
         add_deps("libbpf")
@@ -81,7 +89,7 @@ target("fentry")
 
 target("uprobe")
     set_kind("binary")
-    add_files("uprobe*.c")
+    add_files("uprobe.c", "uprobe.bpf.c")
     add_packages("linux-headers")
     if not has_config("system-libbpf") then
         add_deps("libbpf")
@@ -89,7 +97,7 @@ target("uprobe")
 
 target("kprobe")
     set_kind("binary")
-    add_files("kprobe*.c")
+    add_files("kprobe.c", "kprobe.bpf.c")
     add_packages("linux-headers")
     if not has_config("system-libbpf") then
         add_deps("libbpf")
