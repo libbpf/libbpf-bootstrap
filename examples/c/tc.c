@@ -4,6 +4,11 @@
 #include <unistd.h>
 #include "tc.skel.h"
 
+
+#include <net/if.h>
+#include <arpa/inet.h>
+
+
 #define LO_IFINDEX	1
 
 static volatile sig_atomic_t exiting = 0;
@@ -20,8 +25,46 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 
 int main(int argc, char **argv)
 {
+        int ifindex;
+        uint16_t nodeport;
+        struct in_addr   be1, be2;
+
+        /* Nodeport demo program, assumes 2 backends always for demo */
+
+        if (argc < 5) {
+                fprintf(stderr, "Usage: tc <interface_name> <nodeport> <be pod ip1> <be pod ip2>\n");
+                return 1;
+        }
+
+        ifindex = if_nametoindex(argv[1]);
+        if (!ifindex) {
+                fprintf(stderr, "Bad interface name\n");
+                return 1;
+        }
+
+        nodeport = atoi(argv[2]);
+        if (nodeport < 30000 || nodeport > 32000) {
+                fprintf(stderr, "Nodeport value must be in range <30000, 32000>\n");
+                return 1;
+        }
+
+        inet_aton(argv[3], &be1);
+        inet_aton(argv[4], &be2);
+
+        if (be1.s_addr == 0  || be2.s_addr == 0) {
+                fprintf(stderr, "Invalid backend IP values\n");
+                return 1;
+        }
+
+       printf("Debug: nodeport %u  be1  0x%X    be2   0x%X\n", nodeport , (uint) be1.s_addr, 
+                      (uint)be2.s_addr); 
+
+/**
 	DECLARE_LIBBPF_OPTS(bpf_tc_hook, tc_hook,
 		.ifindex = LO_IFINDEX, .attach_point = BPF_TC_INGRESS);
+**/
+	DECLARE_LIBBPF_OPTS(bpf_tc_hook, tc_hook,
+		.ifindex = ifindex, .attach_point = BPF_TC_INGRESS);
 	DECLARE_LIBBPF_OPTS(bpf_tc_opts, tc_opts,
 		.handle = 1, .priority = 1);
 	bool hook_created = false;
