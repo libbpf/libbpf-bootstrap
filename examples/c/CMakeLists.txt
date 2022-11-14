@@ -36,6 +36,19 @@ ExternalProject_Add(bpftool
   STEP_TARGETS build
 )
 
+find_program(CARGO_EXISTS cargo)
+if(CARGO_EXISTS)
+  ExternalProject_Add(blazesym
+    PREFIX blazesym
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND cargo build --features=cheader --release
+    BUILD_IN_SOURCE TRUE
+    INSTALL_COMMAND ""
+    STEP_TARGETS build
+  )
+endif()
+
 # Set BpfObject input parameters -- note this is usually not necessary unless
 # you're in a highly vendored environment (like libbpf-bootstrap)
 set(BPFOBJECT_BPFTOOL_EXE ${CMAKE_CURRENT_BINARY_DIR}/bpftool/bpftool)
@@ -46,6 +59,9 @@ find_package(BpfObject REQUIRED)
 
 # Create an executable for each application
 file(GLOB apps *.bpf.c)
+if(NOT CARGO_EXISTS)
+  list(REMOVE_ITEM apps ${CMAKE_CURRENT_SOURCE_DIR}/profile.bpf.c)
+endif()
 foreach(app ${apps})
   get_filename_component(app_stem ${app} NAME_WE)
 
@@ -55,4 +71,10 @@ foreach(app ${apps})
 
   add_executable(${app_stem} ${app_stem}.c)
   target_link_libraries(${app_stem} ${app_stem}_skel)
+  if(${app_stem} STREQUAL profile)
+    target_include_directories(${app_stem} PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/)
+    target_link_libraries(${app_stem}
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym.a)
+  endif()
 endforeach()
