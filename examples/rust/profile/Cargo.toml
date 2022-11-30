@@ -5,11 +5,11 @@ authors = ["Kuifeng Lee <kuifeng@fb.com>"]
 license = "GPL-2.0 OR BSD-3-Clause"
 
 [dependencies]
-libbpf-rs = "0.14.0"
+libbpf-rs = "0.19"
 nix = "0.24.1"
 blazesym = { git = "https://github.com/libbpf/blazesym.git", features = ["cheader"] }
 libc = "*"
 clap = { version = "3.1.18", features = ["derive"] }
 
 [build-dependencies]
-libbpf-cargo = "0.9.3"
+libbpf-cargo = "0.13"
