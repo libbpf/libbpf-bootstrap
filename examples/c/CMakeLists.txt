@@ -19,7 +19,7 @@ ExternalProject_Add(libbpf
     INCLUDEDIR=
     LIBDIR=
     UAPIDIR=
-    install
+    install install_uapi_headers
   BUILD_IN_SOURCE TRUE
   INSTALL_COMMAND ""
   STEP_TARGETS build
