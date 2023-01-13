@@ -67,7 +67,7 @@ foreach(app ${apps})
 
   # Build object skeleton and depend skeleton on libbpf build
   bpf_object(${app_stem} ${app_stem}.bpf.c)
-  add_dependencies(${app_stem}_skel libbpf-build)
+  add_dependencies(${app_stem}_skel libbpf-build bpftool-build)
 
   add_executable(${app_stem} ${app_stem}.c)
   target_link_libraries(${app_stem} ${app_stem}_skel)
