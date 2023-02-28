@@ -28,7 +28,6 @@ int main(int argc, char **argv)
 	struct kprobe_bpf *skel;
 	int err;
 
-	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
 
