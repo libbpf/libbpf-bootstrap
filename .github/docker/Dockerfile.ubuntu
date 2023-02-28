@@ -7,7 +7,7 @@ ENV LLVM_VERSION=$LLVM_VERSION
 ARG SHORTNAME="jammy"
 
 RUN apt-get update && apt-get install -y curl gnupg
-RUN if [ "${LLVM_VERSION}" = "16" ]; \
+RUN if [ "${LLVM_VERSION}" = "17" ]; \
     then \
         echo "\n\
 deb http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME} main\n\
