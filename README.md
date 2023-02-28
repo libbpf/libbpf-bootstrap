@@ -1,4 +1,6 @@
-# Demo BPF applications
+# libbpf-bootstrap: demo BPF applications
+
+[![Github Actions](https://github.com/libbpf/libbpf-bootstrap/actions/workflows/build.yml/badge.svg)](https://github.com/libbpf/libbpf-bootstrap/actions/workflows/build.yml)
 
 ## Minimal
 
