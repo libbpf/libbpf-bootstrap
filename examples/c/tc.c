@@ -28,7 +28,6 @@ int main(int argc, char **argv)
 	struct tc_bpf *skel;
 	int err;
 
-	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 	libbpf_set_print(libbpf_print_fn);
 
 	skel = tc_bpf__open_and_load();
