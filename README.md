@@ -304,6 +304,12 @@ On CentOS/Fedora, you need:
 ```shell
 $ dnf install clang elfutils-libelf elfutils-libelf-devel zlib-devel
 ```
+## Getting the source
+
+Download the git repository and checking out submodules:
+```shell
+$ git clone --recurse-submodules https://github.com/libbpf/libbpf-bootstrap
+```
 
 ## C Examples
 
