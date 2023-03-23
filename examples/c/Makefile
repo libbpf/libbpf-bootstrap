@@ -44,7 +44,7 @@ endif
 #
 # Use '-idirafter': Don't interfere with include mechanics except where the
 # build would have failed anyways.
-CLANG_BPF_SYS_INCLUDES = $(shell $(CLANG) -v -E - </dev/null 2>&1 \
+CLANG_BPF_SYS_INCLUDES ?= $(shell $(CLANG) -v -E - </dev/null 2>&1 \
 	| sed -n '/<...> search starts here:/,/End of search list./{ s| \(/.*\)|-idirafter \1|p }')
 
 ifeq ($(V),1)
