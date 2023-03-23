@@ -75,6 +75,6 @@ foreach(app ${apps})
     target_include_directories(${app_stem} PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/)
     target_link_libraries(${app_stem}
-      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym.a)
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym.a -lpthread -lrt -ldl)
   endif()
 endforeach()
