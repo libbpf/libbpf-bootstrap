@@ -224,7 +224,7 @@ int main(int argc, char * const argv[])
 
 	err = bootstrap_parse_cpu_mask_file(online_cpus_file, &online, &num_online_cpus);
 	if (err) {
-		fprintf(stderr, "Fail to get online CPU mask: %d\n", err);
+		fprintf(stderr, "Fail to get online CPU numbers: %d\n", err);
 		goto cleanup;
 	}
 	
