@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <linux/perf_event.h>
@@ -123,6 +124,9 @@ int main(int argc, char * const argv[])
 	int num_cpus;
 	int *pefds = NULL, pefd;
 	int argp, i, err = 0;
+	const char *online_cpus_file = "/sys/devices/system/cpu/online";
+	bool *online = NULL;
+	int num_online_cpus;
 
 	while ((argp = getopt(argc, argv, "hf:")) != -1) {
 		switch (argp) {
@@ -137,6 +141,12 @@ int main(int argc, char * const argv[])
 			show_help(argv[0]);
 			return 1;
 		}
+	}
+
+	err = parse_cpu_mask_file(online_cpus_file, &online, &num_online_cpus);
+	if (err) {
+		fprintf(stderr, "Fail to get online CPU numbers: %d\n", err);
+		goto cleanup;
 	}
 
 	num_cpus = libbpf_num_possible_cpus();
@@ -179,6 +189,10 @@ int main(int argc, char * const argv[])
 	attr.freq = 1;
 
 	for (cpu = 0; cpu < num_cpus; cpu++) {
+		/* skip offline/not present CPUs */
+		if ((cpu >= num_online_cpus || !online[cpu]))
+			continue;
+
 		/* Set up performance monitoring on a CPU/Core */
 		pefd = perf_event_open(&attr, pid, cpu, -1, PERF_FLAG_FD_CLOEXEC);
 		if (pefd < 0) {
@@ -194,12 +208,15 @@ int main(int argc, char * const argv[])
 			goto cleanup;
 		}
 	}
+	
+	free(online);
 
 	/* Wait and receive stack traces */
 	while (ring_buffer__poll(ring_buf, -1) >= 0) {
 	}
 
 cleanup:
+    free(online);
 	if (links) {
 		for (cpu = 0; cpu < num_cpus; cpu++)
 			bpf_link__destroy(links[cpu]);

@@ -13,6 +13,11 @@
 
 typedef __u64 stack_trace_t[MAX_STACK_DEPTH];
 
+/* This function is from libbpf, but it is not a public API and can only be
+used for demonstration, because we statically link against the libbpf
+submodule during build */
+extern int parse_cpu_mask_file(const char *fcpu, bool **mask, int *mask_sz);
+
 struct stacktrace_event {
 	__u32 pid;
 	__u32 cpu_id;
