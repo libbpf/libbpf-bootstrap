@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <linux/perf_event.h>
@@ -113,6 +114,85 @@ static void show_help(const char *progname)
 	printf("Usage: %s [-f <frequency>] [-h]\n", progname);
 }
 
+// copy from https://github.com/libbpf/libbpf/blob/v1.2.0/src/libbpf.c#L12420
+int bootstrap_parse_cpu_mask_str(const char *s, bool **mask, int *mask_sz)
+{
+	int err = 0, n, len, start, end = -1;
+	bool *tmp;
+
+	*mask = NULL;
+	*mask_sz = 0;
+
+	/* Each sub string separated by ',' has format \d+-\d+ or \d+ */
+	while (*s) {
+		if (*s == ',' || *s == '\n') {
+			s++;
+			continue;
+		}
+		n = sscanf(s, "%d%n-%d%n", &start, &len, &end, &len);
+		if (n <= 0 || n > 2) {
+			fprintf(stderr, "Failed to get CPU range %s: %d\n", s, n);
+			err = -EINVAL;
+			goto cleanup;
+		} else if (n == 1) {
+			end = start;
+		}
+		if (start < 0 || start > end) {
+			fprintf(stderr, "Invalid CPU range [%d,%d] in %s\n",
+				start, end, s);
+			err = -EINVAL;
+			goto cleanup;
+		}
+		tmp = realloc(*mask, end + 1);
+		if (!tmp) {
+			err = -ENOMEM;
+			goto cleanup;
+		}
+		*mask = tmp;
+		memset(tmp + *mask_sz, 0, start - *mask_sz);
+		memset(tmp + start, 1, end - start + 1);
+		*mask_sz = end + 1;
+		s += len;
+	}
+	if (!*mask_sz) {
+		fprintf(stderr, "Empty CPU range\n");
+		return -EINVAL;
+	}
+	return 0;
+cleanup:
+	free(*mask);
+	*mask = NULL;
+	return err;
+}
+
+// copy from https://github.com/libbpf/libbpf/blob/v1.2.0/src/libbpf.c#L12470
+int bootstrap_parse_cpu_mask_file(const char *fcpu, bool **mask, int *mask_sz)
+{
+	int fd, err = 0, len;
+	char buf[128];
+
+	fd = open(fcpu, O_RDONLY | O_CLOEXEC);
+	if (fd < 0) {
+		err = -errno;
+		fprintf(stderr, "Failed to open cpu mask file %s: %d\n", fcpu, err);
+		return err;
+	}
+	len = read(fd, buf, sizeof(buf));
+	close(fd);
+	if (len <= 0) {
+		err = len ? -errno : -EINVAL;
+		fprintf(stderr, "Failed to read cpu mask from %s: %d\n", fcpu, err);
+		return err;
+	}
+	if (len >= sizeof(buf)) {
+		fprintf(stderr, "CPU mask is too big in file %s\n", fcpu);
+		return -E2BIG;
+	}
+	buf[len] = '\0';
+
+	return bootstrap_parse_cpu_mask_str(buf, mask, mask_sz);
+}
+
 int main(int argc, char * const argv[])
 {
 	int freq = 1, pid = -1, cpu;
@@ -123,6 +203,9 @@ int main(int argc, char * const argv[])
 	int num_cpus;
 	int *pefds = NULL, pefd;
 	int argp, i, err = 0;
+	const char *online_cpus_file = "/sys/devices/system/cpu/online";
+	bool *online = NULL;
+	int num_online_cpus;
 
 	while ((argp = getopt(argc, argv, "hf:")) != -1) {
 		switch (argp) {
@@ -139,6 +222,12 @@ int main(int argc, char * const argv[])
 		}
 	}
 
+	err = bootstrap_parse_cpu_mask_file(online_cpus_file, &online, &num_online_cpus);
+	if (err) {
+		fprintf(stderr, "Fail to get online CPU mask: %d\n", err);
+		goto cleanup;
+	}
+	
 	num_cpus = libbpf_num_possible_cpus();
 	if (num_cpus <= 0) {
 		fprintf(stderr, "Fail to get the number of processors\n");
@@ -179,6 +268,10 @@ int main(int argc, char * const argv[])
 	attr.freq = 1;
 
 	for (cpu = 0; cpu < num_cpus; cpu++) {
+		/* skip offline/not present CPUs */
+		if ((cpu >= num_online_cpus || !online[cpu]))
+			continue;
+			
 		/* Set up performance monitoring on a CPU/Core */
 		pefd = perf_event_open(&attr, pid, cpu, -1, PERF_FLAG_FD_CLOEXEC);
 		if (pefd < 0) {
