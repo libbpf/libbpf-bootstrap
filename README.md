@@ -22,6 +22,23 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 `minimal` is great as a bare-bones experimental playground to quickly try out
 new ideas or BPF features.
 
+## Minimal_ns
+
+`minimal_ns` is as same as `minimal` but for namespaced environments.
+`minimal` would not work in environments that have namespace, like containers,
+or WSL2, because the perceived pid of the process in the namespace is not the
+actual pid of the process. For executing `minimal` in namespaced environments
+you need to use `minimal_ns` instead.
+
+```shell
+$ cd examples/c
+$ make minimal_ns
+$ sudo ./minimal_ns
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+           <...>-3840345 [022] d...1  8804.331204: bpf_trace_printk: BPF triggered from PID 9087.
+           <...>-3840345 [022] d...1  8804.331215: bpf_trace_printk: BPF triggered from PID 9087.
+```
+
 ## Minimal_Legacy
 
 This version of `minimal` is modified to allow running on even older kernels
