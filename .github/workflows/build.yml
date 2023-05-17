@@ -12,16 +12,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [14, 15, 16, 17]
+        llvm: [11, 12, 13, 14, 15, 16, 17]
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: recursive
-    - name: Build container
+    - name: Build container (20.04)
+      if: ${{ matrix.llvm < 14 }}
       uses: docker/build-push-action@v3
       with:
         push: false
-        build-args: LLVM_VERSION=${{ matrix.llvm }}
+        build-args: |
+          LLVM_VERSION=${{ matrix.llvm }}
+          VERSION=20.04
+          SHORTNAME=focal
+        file: ./.github/docker/Dockerfile.ubuntu
+        tags: build_container
+    - name: Build container (22.04)
+      if: ${{ matrix.llvm >= 14 }}
+      uses: docker/build-push-action@v3
+      with:
+        push: false
+        build-args: |
+          LLVM_VERSION=${{ matrix.llvm }}
+          VERSION=22.04
+          SHORTNAME=jammy
         file: ./.github/docker/Dockerfile.ubuntu
         tags: build_container
     - name: Build examples/c
@@ -30,7 +45,7 @@ jobs:
           -v $(pwd):/libbpf-bootstrap \
           build_container \
           /bin/bash -c \
-          'cd /libbpf-bootstrap/examples/c && make'
+          'cd /libbpf-bootstrap/examples/c && make -j`nproc`'
     - name: Build examples/rust
       run: |
         docker run \

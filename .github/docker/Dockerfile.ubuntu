@@ -5,6 +5,7 @@ ARG LLVM_VERSION="14"
 ENV LLVM_VERSION=$LLVM_VERSION
 
 ARG SHORTNAME="jammy"
+ENV SHORTNAME=$SHORTNAME
 
 RUN apt-get update && apt-get install -y curl gnupg
 RUN if [ "${LLVM_VERSION}" = "17" ]; \
