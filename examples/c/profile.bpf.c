@@ -34,7 +34,8 @@ int profile(void *ctx)
 
 	event->kstack_sz = bpf_get_stack(ctx, event->kstack, sizeof(event->kstack), 0);
 
-	event->ustack_sz = bpf_get_stack(ctx, event->ustack, sizeof(event->ustack), BPF_F_USER_STACK);
+	event->ustack_sz =
+		bpf_get_stack(ctx, event->ustack, sizeof(event->ustack), BPF_F_USER_STACK);
 
 	bpf_ringbuf_submit(event, 0);
 

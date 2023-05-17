@@ -15,14 +15,16 @@ int BPF_USDT(usdt_auto_attach, void *arg1, int arg2, void *arg3)
 	if (pid != my_pid)
 		return 0;
 
-	bpf_printk("USDT auto attach to libc:setjmp: arg1 = %lx, arg2 = %d, arg3 = %lx", arg1, arg2, arg3);
+	bpf_printk("USDT auto attach to libc:setjmp: arg1 = %lx, arg2 = %d, arg3 = %lx", arg1, arg2,
+		   arg3);
 	return 0;
 }
 
 SEC("usdt")
 int BPF_USDT(usdt_manual_attach, void *arg1, int arg2, void *arg3)
 {
-	bpf_printk("USDT manual attach to libc:setjmp: arg1 = %lx, arg2 = %d, arg3 = %lx", arg1, arg2, arg3);
+	bpf_printk("USDT manual attach to libc:setjmp: arg1 = %lx, arg2 = %d, arg3 = %lx", arg1,
+		   arg2, arg3);
 	return 0;
 }
 

@@ -9,8 +9,8 @@
 #include <bpf/bpf_endian.h>
 #include "sockfilter.h"
 
-#define IP_MF		0x2000
-#define IP_OFFSET	0x1FFF
+#define IP_MF	  0x2000
+#define IP_OFFSET 0x1FFF
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 

@@ -19,7 +19,8 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-static void usdt_trigger() {
+static void usdt_trigger()
+{
 	setjmp(env);
 }
 
@@ -48,8 +49,8 @@ int main(int argc, char **argv)
 	 * Manually attach to libc.so we find.
 	 * We specify pid here, so we don't have to do pid filtering in BPF program.
 	 */
-	skel->links.usdt_manual_attach = bpf_program__attach_usdt(skel->progs.usdt_manual_attach, getpid(),
-								  "libc.so.6", "libc", "setjmp", NULL);
+	skel->links.usdt_manual_attach = bpf_program__attach_usdt(
+		skel->progs.usdt_manual_attach, getpid(), "libc.so.6", "libc", "setjmp", NULL);
 	if (!skel->links.usdt_manual_attach) {
 		err = errno;
 		fprintf(stderr, "Failed to attach BPF program `usdt_manual_attach`\n");

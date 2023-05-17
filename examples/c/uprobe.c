@@ -80,11 +80,10 @@ int main(int argc, char **argv)
 	uprobe_offset = get_uprobe_offset(&uprobed_add);
 
 	/* Attach tracepoint handler */
-	skel->links.uprobe_add = bpf_program__attach_uprobe(skel->progs.uprobe_add,
-							    false /* not uretprobe */,
-							    0 /* self pid */,
-							    "/proc/self/exe",
-							    uprobe_offset);
+	skel->links.uprobe_add =
+		bpf_program__attach_uprobe(skel->progs.uprobe_add, false /* not uretprobe */,
+					   0 /* self pid */, "/proc/self/exe", uprobe_offset);
+
 	if (!skel->links.uprobe_add) {
 		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
@@ -95,11 +94,10 @@ int main(int argc, char **argv)
 	 * processes that use the same binary executable; to do that we need
 	 * to specify -1 as PID, as we do here
 	 */
-	skel->links.uretprobe_add = bpf_program__attach_uprobe(skel->progs.uretprobe_add,
-							       true /* uretprobe */,
-							       -1 /* any pid */,
-							       "/proc/self/exe",
-							       uprobe_offset);
+	skel->links.uretprobe_add =
+		bpf_program__attach_uprobe(skel->progs.uretprobe_add, true /* uretprobe */,
+					   -1 /* any pid */, "/proc/self/exe", uprobe_offset);
+
 	if (!skel->links.uretprobe_add) {
 		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
@@ -118,7 +116,7 @@ int main(int argc, char **argv)
 	printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` "
 	       "to see output of the BPF programs.\n");
 
-	for (i = 0; ; i++) {
+	for (i = 0;; i++) {
 		/* trigger our BPF programs */
 		fprintf(stderr, ".");
 		uprobed_add(i, i + 1);

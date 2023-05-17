@@ -15,31 +15,15 @@
 #include "sockfilter.h"
 #include "sockfilter.skel.h"
 
-static const char * ipproto_mapping[IPPROTO_MAX] = {
-	[IPPROTO_IP] = "IP",
-	[IPPROTO_ICMP] = "ICMP",
-	[IPPROTO_IGMP] = "IGMP",
-	[IPPROTO_IPIP] = "IPIP",
-	[IPPROTO_TCP] = "TCP",
-	[IPPROTO_EGP] = "EGP",
-	[IPPROTO_PUP] = "PUP",
-	[IPPROTO_UDP] = "UDP",
-	[IPPROTO_IDP] = "IDP",
-	[IPPROTO_TP] = "TP",
-	[IPPROTO_DCCP] = "DCCP",
-	[IPPROTO_IPV6] = "IPV6",
-	[IPPROTO_RSVP] = "RSVP",
-	[IPPROTO_GRE] = "GRE",
-	[IPPROTO_ESP] = "ESP",
-	[IPPROTO_AH] = "AH",
-	[IPPROTO_MTP] = "MTP",
-	[IPPROTO_BEETPH] = "BEETPH",
-	[IPPROTO_ENCAP] = "ENCAP",
-	[IPPROTO_PIM] = "PIM",
-	[IPPROTO_COMP] = "COMP",
-	[IPPROTO_SCTP] = "SCTP",
-	[IPPROTO_UDPLITE] = "UDPLITE",
-	[IPPROTO_MPLS] = "MPLS",
+static const char *ipproto_mapping[IPPROTO_MAX] = {
+	[IPPROTO_IP] = "IP",	   [IPPROTO_ICMP] = "ICMP",	  [IPPROTO_IGMP] = "IGMP",
+	[IPPROTO_IPIP] = "IPIP",   [IPPROTO_TCP] = "TCP",	  [IPPROTO_EGP] = "EGP",
+	[IPPROTO_PUP] = "PUP",	   [IPPROTO_UDP] = "UDP",	  [IPPROTO_IDP] = "IDP",
+	[IPPROTO_TP] = "TP",	   [IPPROTO_DCCP] = "DCCP",	  [IPPROTO_IPV6] = "IPV6",
+	[IPPROTO_RSVP] = "RSVP",   [IPPROTO_GRE] = "GRE",	  [IPPROTO_ESP] = "ESP",
+	[IPPROTO_AH] = "AH",	   [IPPROTO_MTP] = "MTP",	  [IPPROTO_BEETPH] = "BEETPH",
+	[IPPROTO_ENCAP] = "ENCAP", [IPPROTO_PIM] = "PIM",	  [IPPROTO_COMP] = "COMP",
+	[IPPROTO_SCTP] = "SCTP",   [IPPROTO_UDPLITE] = "UDPLITE", [IPPROTO_MPLS] = "MPLS",
 	[IPPROTO_RAW] = "RAW"
 };
 
@@ -86,14 +70,11 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	if (!if_indextoname(e->ifindex, ifname))
 		return 0;
 
-	printf("interface: %s\tprotocol: %s\t%s:%d(src) -> %s:%d(dst)\n",
-		ifname,
-		ipproto_mapping[e->ip_proto],
-		inet_ntoa((struct in_addr){e->src_addr}),
-		ntohs(e->port16[0]),
-		inet_ntoa((struct in_addr){e->dst_addr}),
-		ntohs(e->port16[1])
-	);
+	printf("interface: %s\tprotocol: %s\t%s:%d(src) -> %s:%d(dst)\n", ifname,
+	       ipproto_mapping[e->ip_proto], inet_ntoa((struct in_addr){ e->src_addr }),
+	       ntohs(e->port16[0]), inet_ntoa((struct in_addr){ e->dst_addr }),
+	       ntohs(e->port16[1]));
+
 	return 0;
 }
 
