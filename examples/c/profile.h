@@ -8,7 +8,7 @@
 #endif
 
 #ifndef MAX_STACK_DEPTH
-#define MAX_STACK_DEPTH         128
+#define MAX_STACK_DEPTH 128
 #endif
 
 typedef __u64 stack_trace_t[MAX_STACK_DEPTH];

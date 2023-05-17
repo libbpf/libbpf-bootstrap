@@ -21,8 +21,8 @@
  */
 extern int parse_cpu_mask_file(const char *fcpu, bool **mask, int *mask_sz);
 
-static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
-			    int cpu, int group_fd, unsigned long flags)
+static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu, int group_fd,
+			    unsigned long flags)
 {
 	int ret;
 
@@ -59,13 +59,11 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 		if (result->entries[i].size == 1) {
 			sym = &result->entries[i].syms[0];
 			if (sym->path && sym->path[0]) {
-				printf("  %d [<%016llx>] %s+0x%llx %s:%ld\n",
-				       i, stack[i], sym->symbol,
-				       stack[i] - sym->start_address,
-				       sym->path, sym->line_no);
+				printf("  %d [<%016llx>] %s+0x%llx %s:%ld\n", i, stack[i],
+				       sym->symbol, stack[i] - sym->start_address, sym->path,
+				       sym->line_no);
 			} else {
-				printf("  %d [<%016llx>] %s+0x%llx\n",
-				       i, stack[i], sym->symbol,
+				printf("  %d [<%016llx>] %s+0x%llx\n", i, stack[i], sym->symbol,
 				       stack[i] - sym->start_address);
 			}
 			continue;
@@ -75,9 +73,8 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 		for (j = 0; j < result->entries[i].size; j++) {
 			sym = &result->entries[i].syms[j];
 			if (sym->path && sym->path[0]) {
-				printf("        %s+0x%llx %s:%ld\n",
-				       sym->symbol, stack[i] - sym->start_address,
-				       sym->path, sym->line_no);
+				printf("        %s+0x%llx %s:%ld\n", sym->symbol,
+				       stack[i] - sym->start_address, sym->path, sym->line_no);
 			} else {
 				printf("        %s+0x%llx\n", sym->symbol,
 				       stack[i] - sym->start_address);
@@ -121,7 +118,7 @@ static void show_help(const char *progname)
 	printf("Usage: %s [-f <frequency>] [-h]\n", progname);
 }
 
-int main(int argc, char * const argv[])
+int main(int argc, char *const argv[])
 {
 	const char *online_cpus_file = "/sys/devices/system/cpu/online";
 	int freq = 1, pid = -1, cpu;
@@ -218,7 +215,7 @@ int main(int argc, char * const argv[])
 			goto cleanup;
 		}
 	}
-	
+
 	/* Wait and receive stack traces */
 	while (ring_buffer__poll(ring_buf, -1) >= 0) {
 	}

@@ -5,8 +5,8 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 
-#define TC_ACT_OK	0
-#define ETH_P_IP	0x0800		/* Internet Protocol packet	*/
+#define TC_ACT_OK 0
+#define ETH_P_IP  0x0800 /* Internet Protocol packet	*/
 
 SEC("tc")
 int tc_ingress(struct __sk_buff *ctx)

@@ -29,7 +29,8 @@ int main(int argc, char **argv)
 
 	/* ensure BPF program only handles write() syscalls from our process */
 	pid = getpid();
-	err = bpf_map__update_elem(skel->maps.my_pid_map, &index, sizeof(index), &pid, sizeof(pid_t), BPF_ANY);
+	err = bpf_map__update_elem(skel->maps.my_pid_map, &index, sizeof(index), &pid,
+				   sizeof(pid_t), BPF_ANY);
 	if (err < 0) {
 		fprintf(stderr, "Error updating map with pid: %s\n", strerror(err));
 		goto cleanup;

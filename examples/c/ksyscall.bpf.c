@@ -6,7 +6,7 @@
 #define TASK_COMM_LEN 16
 
 SEC("ksyscall/tgkill")
-int BPF_KSYSCALL(tgkill_entry, pid_t tgid, pid_t tid, int sig) 
+int BPF_KSYSCALL(tgkill_entry, pid_t tgid, pid_t tid, int sig)
 {
 	char comm[TASK_COMM_LEN];
 	__u32 caller_pid = bpf_get_current_pid_tgid() >> 32;
@@ -22,13 +22,14 @@ int BPF_KSYSCALL(tgkill_entry, pid_t tgid, pid_t tid, int sig)
 	}
 
 	bpf_get_current_comm(&comm, sizeof(comm));
-	bpf_printk("tgkill syscall called by PID %d (%s) for thread id %d with pid %d and signal %d.",
-		   caller_pid, comm, tid, tgid, sig);
+	bpf_printk(
+		"tgkill syscall called by PID %d (%s) for thread id %d with pid %d and signal %d.",
+		caller_pid, comm, tid, tgid, sig);
 	return 0;
 }
 
 SEC("ksyscall/kill")
-int BPF_KSYSCALL(entry_probe, pid_t pid, int sig) 
+int BPF_KSYSCALL(entry_probe, pid_t pid, int sig)
 {
 	char comm[TASK_COMM_LEN];
 	__u32 caller_pid = bpf_get_current_pid_tgid() >> 32;
@@ -44,8 +45,8 @@ int BPF_KSYSCALL(entry_probe, pid_t pid, int sig)
 	}
 
 	bpf_get_current_comm(&comm, sizeof(comm));
-	bpf_printk("KILL syscall called by PID %d (%s) for PID %d with signal %d.",
-		   caller_pid, comm, pid, sig);
+	bpf_printk("KILL syscall called by PID %d (%s) for PID %d with signal %d.", caller_pid,
+		   comm, pid, sig);
 	return 0;
 }
 
