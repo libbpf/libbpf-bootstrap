@@ -7,7 +7,7 @@ license = "GPL-2.0 OR BSD-3-Clause"
 [dependencies]
 libbpf-rs = "0.19"
 nix = "0.24.1"
-blazesym = { path = "../../../blazesym", features = ["cheader", "dont-generate-test-files"] }
+blazesym = { path = "../../../blazesym", default-features = false, features = ["dont-generate-test-files"] }
 libc = "*"
 clap = { version = "3.1.18", features = ["derive"] }
 
