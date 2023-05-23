@@ -19,7 +19,7 @@ mod profile;
 use profile::*;
 
 extern crate blazesym;
-use blazesym::*;
+use blazesym::symbolize;
 
 extern crate libc;
 
@@ -73,17 +73,30 @@ fn attach_perf_event(
 }
 
 // Pid 0 means a kernel space stack.
-fn show_stack_trace(stack: &[u64], symbolizer: &BlazeSymbolizer, pid: u32) {
-    let src = if pid == 0 {
-        SymbolSrcCfg::Kernel {
-            kallsyms: None,
-            kernel_image: None,
-        }
+fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32) {
+    let converted_stack;
+    // The kernel always reports `u64` addresses, whereas blazesym uses `usize`.
+    // Convert the stack trace as necessary.
+    let stack = if mem::size_of::<blazesym::Addr>() != mem::size_of::<u64>() {
+        converted_stack = stack
+            .iter()
+            .copied()
+            .map(|addr| addr as blazesym::Addr)
+            .collect::<Vec<_>>();
+        converted_stack.as_slice()
     } else {
-        SymbolSrcCfg::Process { pid: Some(pid) }
+        // SAFETY: `Addr` has the same size as `u64`, so it can be trivially and
+        //         safely converted.
+        unsafe { mem::transmute::<_, &[blazesym::Addr]>(stack) }
     };
 
-    let syms = symbolizer.symbolize(&[src], stack);
+    let src = if pid == 0 {
+        symbolize::Source::from(symbolize::Kernel::default())
+    } else {
+        symbolize::Source::from(symbolize::Process::new(pid.into()))
+    };
+
+    let syms = symbolizer.symbolize(&src, stack).unwrap();
     for i in 0..stack.len() {
         if syms.len() <= i || syms[i].len() == 0 {
             println!("  {} [<{:016x}>]", i, stack[i]);
@@ -92,15 +105,15 @@ fn show_stack_trace(stack: &[u64], symbolizer: &BlazeSymbolizer, pid: u32) {
 
         if syms[i].len() == 1 {
             let sym = &syms[i][0];
-            if !sym.path.is_empty() {
+            if !sym.path.as_os_str().is_empty() {
                 println!(
                     "  {} [<{:016x}>] {}+0x{:x} {}:{}",
                     i,
                     stack[i],
                     sym.symbol,
-                    stack[i] - sym.start_address,
-                    sym.path,
-                    sym.line_no
+                    stack[i] - sym.addr,
+                    sym.path.display(),
+                    sym.line
                 );
             } else {
                 println!(
@@ -108,7 +121,7 @@ fn show_stack_trace(stack: &[u64], symbolizer: &BlazeSymbolizer, pid: u32) {
                     i,
                     stack[i],
                     sym.symbol,
-                    stack[i] - sym.start_address
+                    stack[i] - sym.addr
                 );
             }
             continue;
@@ -117,22 +130,22 @@ fn show_stack_trace(stack: &[u64], symbolizer: &BlazeSymbolizer, pid: u32) {
         println!("  {} [<{:016x}>]", i, stack[i]);
 
         for sym in &syms[i] {
-            if !sym.path.is_empty() {
+            if !sym.path.as_os_str().is_empty() {
                 println!(
                     "        {}+0x{:x} {}:{}",
                     sym.symbol,
-                    stack[i] - sym.start_address,
-                    sym.path,
-                    sym.line_no
+                    stack[i] - sym.addr,
+                    sym.path.display(),
+                    sym.line
                 );
             } else {
-                println!("        {}+0x{}", sym.symbol, stack[i] - sym.start_address);
+                println!("        {}+0x{}", sym.symbol, stack[i] - sym.addr);
             }
         }
     }
 }
 
-fn event_handler(symbolizer: &BlazeSymbolizer, data: &[u8]) -> ::std::os::raw::c_int {
+fn event_handler(symbolizer: &symbolize::Symbolizer, data: &[u8]) -> ::std::os::raw::c_int {
     if data.len() != mem::size_of::<stacktrace_event>() {
         eprintln!(
             "Invalid size {} != {}",
@@ -190,7 +203,7 @@ fn main() -> Result<(), Error> {
     let args = Args::parse();
     let freq = if args.freq < 1 { 1 } else { args.freq };
 
-    let symbolizer = BlazeSymbolizer::new()?;
+    let symbolizer = symbolize::Symbolizer::new();
 
     let skel_builder = ProfileSkelBuilder::default();
     let open_skel = skel_builder.open().unwrap();

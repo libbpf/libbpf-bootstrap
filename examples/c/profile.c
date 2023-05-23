@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: (LGPL-2.1 OR BSD-2-Clause)
 /* Copyright (c) 2022 Facebook */
+#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -30,25 +32,26 @@ static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu
 	return ret;
 }
 
-static struct blazesym *symbolizer;
+static struct blaze_symbolizer *symbolizer;
 
 static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 {
-	const struct blazesym_result *result;
-	const struct blazesym_csym *sym;
-	sym_src_cfg src;
+	const struct blaze_result *result;
+	const struct blaze_sym *sym;
 	int i, j;
 
+	assert(sizeof(uintptr_t) == sizeof(uint64_t));
+
 	if (pid) {
-		src.src_type = SRC_T_PROCESS;
-		src.params.process.pid = pid;
+		struct blaze_symbolize_src_process src = {
+			.pid = pid,
+		};
+		result = blaze_symbolize_process(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	} else {
-		src.src_type = SRC_T_KERNEL;
-		src.params.kernel.kallsyms = NULL;
-		src.params.kernel.kernel_image = NULL;
+		struct blaze_symbolize_src_kernel src = {};
+		result = blaze_symbolize_kernel(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	}
 
-	result = blazesym_symbolize(symbolizer, &src, 1, (const uint64_t *)stack, stack_sz);
 
 	for (i = 0; i < stack_sz; i++) {
 		if (!result || result->size <= i || !result->entries[i].size) {
@@ -60,11 +63,11 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 			sym = &result->entries[i].syms[0];
 			if (sym->path && sym->path[0]) {
 				printf("  %d [<%016llx>] %s+0x%llx %s:%ld\n", i, stack[i],
-				       sym->symbol, stack[i] - sym->start_address, sym->path,
-				       sym->line_no);
+				       sym->symbol, stack[i] - sym->addr, sym->path,
+				       sym->line);
 			} else {
 				printf("  %d [<%016llx>] %s+0x%llx\n", i, stack[i], sym->symbol,
-				       stack[i] - sym->start_address);
+				       stack[i] - sym->addr);
 			}
 			continue;
 		}
@@ -74,15 +77,15 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 			sym = &result->entries[i].syms[j];
 			if (sym->path && sym->path[0]) {
 				printf("        %s+0x%llx %s:%ld\n", sym->symbol,
-				       stack[i] - sym->start_address, sym->path, sym->line_no);
+				       stack[i] - sym->addr, sym->path, sym->line);
 			} else {
 				printf("        %s+0x%llx\n", sym->symbol,
-				       stack[i] - sym->start_address);
+				       stack[i] - sym->addr);
 			}
 		}
 	}
 
-	blazesym_result_free(result);
+	blaze_result_free(result);
 }
 
 /* Receive events from the ring buffer. */
@@ -166,7 +169,7 @@ int main(int argc, char *const argv[])
 		goto cleanup;
 	}
 
-	symbolizer = blazesym_new();
+	symbolizer = blaze_symbolizer_new();
 	if (!symbolizer) {
 		fprintf(stderr, "Fail to create a symbolizer\n");
 		err = -1;
@@ -235,7 +238,7 @@ cleanup:
 	}
 	ring_buffer__free(ring_buf);
 	profile_bpf__destroy(skel);
-	blazesym_free(symbolizer);
+	blaze_symbolizer_free(symbolizer);
 	free(online_mask);
 	return -err;
 }
