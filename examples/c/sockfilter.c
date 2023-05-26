@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /* Copyright (c) 2022 Jacky Yin */
+#include <argp.h>
 #include <arpa/inet.h>
 #include <assert.h>
 #include <bpf/libbpf.h>
@@ -14,6 +15,46 @@
 #include <unistd.h>
 #include "sockfilter.h"
 #include "sockfilter.skel.h"
+
+static struct env {
+	const char *interface;
+} env;
+
+const char argp_program_doc[] =
+	"BPF socket filter demo application.\n"
+	"\n"
+	"This program watch network packet of specified interface and print out src/dst\n"
+	"information.\n"
+	"\n"
+	"Currently only IPv4 is supported.\n"
+	"\n"
+	"USAGE: ./sockfilter [-i <interface>]\n";
+
+static const struct argp_option opts[] = {
+	{ "interface", 'i', "INTERFACE", 0, "Network interface to attach" },
+	{},
+};
+
+static error_t parse_arg(int key, char *arg, struct argp_state *state)
+{
+	switch (key) {
+	case 'i':
+		env.interface = arg;
+		break;
+	case ARGP_KEY_ARG:
+		argp_usage(state);
+		break;
+	default:
+		return ARGP_ERR_UNKNOWN;
+	}
+	return 0;
+}
+
+static const struct argp argp = {
+	.options = opts,
+	.parser = parse_arg,
+	.doc = argp_program_doc,
+};
 
 static const char *ipproto_mapping[IPPROTO_MAX] = {
 	[IPPROTO_IP] = "IP",	   [IPPROTO_ICMP] = "ICMP",	  [IPPROTO_IGMP] = "IGMP",
@@ -99,6 +140,12 @@ int main(int argc, char **argv)
 	struct sockfilter_bpf *skel;
 	int err, prog_fd, sock;
 
+	env.interface = "lo";
+	/* Parse command line arguments */
+	err = argp_parse(&argp, argc, argv, 0, NULL, NULL);
+	if (err)
+		return -err;
+
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
 
@@ -122,7 +169,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Create raw socket for localhost interface */
-	sock = open_raw_sock("lo");
+	sock = open_raw_sock(env.interface);
 	if (sock < 0) {
 		err = -2;
 		fprintf(stderr, "Failed to open raw socket\n");
