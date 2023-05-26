@@ -56,10 +56,17 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
+static inline void ltoa(uint32_t addr, char *dst)
+{
+	snprintf(dst, 16, "%u.%u.%u.%u", (addr >> 24) & 0xFF, (addr >> 16) & 0xFF,
+		 (addr >> 8) & 0xFF, (addr & 0xFF));
+}
+
 static int handle_event(void *ctx, void *data, size_t data_sz)
 {
 	const struct so_event *e = data;
 	char ifname[IF_NAMESIZE];
+	char sstr[16] = {}, dstr[16] = {};
 
 	if (e->pkt_type != PACKET_HOST)
 		return 0;
@@ -70,10 +77,11 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	if (!if_indextoname(e->ifindex, ifname))
 		return 0;
 
+	ltoa(ntohl(e->src_addr), sstr);
+	ltoa(ntohl(e->dst_addr), dstr);
+
 	printf("interface: %s\tprotocol: %s\t%s:%d(src) -> %s:%d(dst)\n", ifname,
-	       ipproto_mapping[e->ip_proto], inet_ntoa((struct in_addr){ e->src_addr }),
-	       ntohs(e->port16[0]), inet_ntoa((struct in_addr){ e->dst_addr }),
-	       ntohs(e->port16[1]));
+	       ipproto_mapping[e->ip_proto], sstr, ntohs(e->port16[0]), dstr, ntohs(e->port16[1]));
 
 	return 0;
 }
