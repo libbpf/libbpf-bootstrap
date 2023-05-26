@@ -298,7 +298,7 @@ Currently, most of the IPv4 protocols defined in `uapi/linux/in.h` are included,
 please check `ipproto_mapping` of `examples/c/sockfilter.c` for the supported protocols.
 
 ```shell
-$ sudo ./sockfilter
+$ sudo ./sockfilter -i <interface>
 interface:lo    protocol: UDP   127.0.0.1:51845(src) -> 127.0.0.1:53(dst)
 interface:lo    protocol: UDP   127.0.0.1:41552(src) -> 127.0.0.1:53(dst)
 ```
