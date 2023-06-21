@@ -3,4 +3,5 @@ members = [
   "tracecon",
   "xdp",
   "profile",
+  "minimal_ns"
 ]

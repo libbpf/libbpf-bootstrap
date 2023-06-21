@@ -39,6 +39,18 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
            <...>-3840345 [022] d...1  8804.331215: bpf_trace_printk: BPF triggered from PID 9087.
 ```
 
+the same example is also provided for rust:
+```shell
+$ cd examples/rust
+$ cargo build --release
+$ sudo ./target/release/minimal_ns
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+           <...>-3840345 [022] d...1  8804.331204: bpf_trace_printk: BPF triggered from PID 9087.
+           <...>-3840345 [022] d...1  8804.331215: bpf_trace_printk: BPF triggered from PID 9087.
+```
+
+
+
 ## minimal_Legacy
 
 This version of `minimal` is modified to allow running on even older kernels

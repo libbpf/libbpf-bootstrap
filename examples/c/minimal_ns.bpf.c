@@ -6,7 +6,7 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-int my_pid = 0;
+unsigned int my_pid = 0;
 unsigned long long dev;
 unsigned long long ino;
 
