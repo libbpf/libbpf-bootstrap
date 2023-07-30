@@ -12,37 +12,6 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-/*
- * Taken from https://github.com/torvalds/linux/blob/9b59ec8d50a1f28747ceff9a4f39af5deba9540e/tools/testing/selftests/bpf/trace_helpers.c#L149-L205
- *
- * See discussion in https://github.com/libbpf/libbpf-bootstrap/pull/90
- */
-ssize_t get_uprobe_offset(const void *addr)
-{
-	size_t start, end, base;
-	char buf[256];
-	bool found = false;
-	FILE *f;
-
-	f = fopen("/proc/self/maps", "r");
-	if (!f)
-		return -errno;
-
-	while (fscanf(f, "%zx-%zx %s %zx %*[^\n]\n", &start, &end, buf, &base) == 4) {
-		if (buf[2] == 'x' && (uintptr_t)addr >= start && (uintptr_t)addr < end) {
-			found = true;
-			break;
-		}
-	}
-
-	fclose(f);
-
-	if (!found)
-		return -ESRCH;
-
-	return (uintptr_t)addr - start + base;
-}
-
 /* It's a global function to make sure compiler doesn't inline it. */
 int uprobed_add(int a, int b)
 {
@@ -57,8 +26,8 @@ int uprobed_sub(int a, int b)
 int main(int argc, char **argv)
 {
 	struct uprobe_bpf *skel;
-	long uprobe_offset;
 	int err, i;
+	LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts);
 
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
@@ -70,20 +39,18 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	/* uprobe/uretprobe expects relative offset of the function to attach
-	 * to. This offset is relateve to the process's base load address. So
-	 * easy way to do this is to take an absolute address of the desired
-	 * function and substract base load address from it.  If we were to
-	 * parse ELF to calculate this function, we'd need to add .text
-	 * section offset and function's offset within .text ELF section.
-	 */
-	uprobe_offset = get_uprobe_offset(&uprobed_add);
-
 	/* Attach tracepoint handler */
-	skel->links.uprobe_add =
-		bpf_program__attach_uprobe(skel->progs.uprobe_add, false /* not uretprobe */,
-					   0 /* self pid */, "/proc/self/exe", uprobe_offset);
-
+	uprobe_opts.func_name = "uprobed_add";
+	uprobe_opts.retprobe = false;
+	/* uprobe/uretprobe expects relative offset of the function to attach
+	 * to. libbpf will automatically find the offset for us if we provide the
+	 * function name. If the function name is not specified, libbpf will try
+	 * to use the function offset instead.
+	 */
+	skel->links.uprobe_add = bpf_program__attach_uprobe_opts(skel->progs.uprobe_add,
+								 0 /* self pid */, "/proc/self/exe",
+								 0 /* offset for function */,
+								 &uprobe_opts /* opts */);
 	if (!skel->links.uprobe_add) {
 		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
@@ -94,10 +61,11 @@ int main(int argc, char **argv)
 	 * processes that use the same binary executable; to do that we need
 	 * to specify -1 as PID, as we do here
 	 */
-	skel->links.uretprobe_add =
-		bpf_program__attach_uprobe(skel->progs.uretprobe_add, true /* uretprobe */,
-					   -1 /* any pid */, "/proc/self/exe", uprobe_offset);
-
+	uprobe_opts.func_name = "uprobed_add";
+	uprobe_opts.retprobe = true;
+	skel->links.uretprobe_add = bpf_program__attach_uprobe_opts(
+		skel->progs.uretprobe_add, -1 /* self pid */, "/proc/self/exe",
+		0 /* offset for function */, &uprobe_opts /* opts */);
 	if (!skel->links.uretprobe_add) {
 		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
