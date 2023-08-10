@@ -188,7 +188,7 @@ fn event_handler(symbolizer: &symbolize::Symbolizer, data: &[u8]) -> ::std::os::
 #[derive(Parser, Debug)]
 struct Args {
     /// Sampling frequency
-    #[clap(short, default_value_t = 1)]
+    #[arg(short, default_value_t = 1)]
     freq: u64,
 }
 
