@@ -1,9 +1,6 @@
-use std::u64;
-
-use std::boxed::Box;
 use std::io::Error;
 use std::mem;
-use std::result::Result;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use blazesym::symbolize;
@@ -97,49 +94,36 @@ fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32)
         },
     };
 
-    for i in 0..stack.len() {
-        if syms.len() <= i || syms[i].len() == 0 {
-            println!("  {} [<{:016x}>]", i, stack[i]);
-            continue;
-        }
+    for (i, (addr, syms)) in stack.iter().zip(syms).enumerate() {
+        let mut addr_fmt = format!(" {i:2} [<{addr:016x}>]");
+        if syms.is_empty() {
+            println!("{addr_fmt}")
+        } else {
+            for (i, sym) in syms.into_iter().enumerate() {
+                if i == 1 {
+                    addr_fmt = addr_fmt.replace(|_c| true, " ");
+                }
 
-        if syms[i].len() == 1 {
-            let sym = &syms[i][0];
-            if !sym.path.as_os_str().is_empty() {
-                println!(
-                    "  {} [<{:016x}>] {}+0x{:x} {}:{}",
-                    i,
-                    stack[i],
-                    sym.symbol,
-                    stack[i] - sym.addr,
-                    sym.path.display(),
-                    sym.line
-                );
-            } else {
-                println!(
-                    "  {} [<{:016x}>] {}+0x{}",
-                    i,
-                    stack[i],
-                    sym.symbol,
-                    stack[i] - sym.addr
-                );
-            }
-            continue;
-        }
+                let symbolize::Sym {
+                    name, addr, offset, ..
+                } = sym;
 
-        println!("  {} [<{:016x}>]", i, stack[i]);
+                let path = match (sym.dir, sym.file) {
+                    (Some(dir), Some(file)) => Some(dir.join(file)),
+                    (dir, file) => dir.or_else(|| file.map(PathBuf::from)),
+                };
 
-        for sym in &syms[i] {
-            if !sym.path.as_os_str().is_empty() {
-                println!(
-                    "        {}+0x{:x} {}:{}",
-                    sym.symbol,
-                    stack[i] - sym.addr,
-                    sym.path.display(),
-                    sym.line
-                );
-            } else {
-                println!("        {}+0x{}", sym.symbol, stack[i] - sym.addr);
+                let src_loc = if let (Some(path), Some(line)) = (path, sym.line) {
+                    if let Some(col) = sym.column {
+                        format!(" {}:{line}:{col}", path.display())
+                    } else {
+                        format!(" {}:{line}", path.display())
+                    }
+                } else {
+                    String::new()
+                };
+
+                println!("{addr_fmt} {name} @ {addr:#x}+{offset:#x}{src_loc}");
             }
         }
     }
