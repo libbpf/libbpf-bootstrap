@@ -5,9 +5,16 @@ use std::time::Duration;
 
 use blazesym::symbolize;
 
+use clap::ArgAction;
 use clap::Parser;
 
 use nix::unistd::close;
+
+use tracing::subscriber::set_global_default as set_global_subscriber;
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::fmt::time::SystemTime;
+use tracing_subscriber::FmtSubscriber;
 
 #[path = "bpf/.output/profile.skel.rs"]
 mod profile;
@@ -181,10 +188,27 @@ struct Args {
     /// Sampling frequency
     #[arg(short, default_value_t = 1)]
     freq: u64,
+    /// Increase verbosity (can be supplied multiple times).
+    #[arg(short = 'v', long = "verbose", global = true, action = ArgAction::Count)]
+    verbosity: u8,
 }
 
 fn main() -> Result<(), Error> {
     let args = Args::parse();
+    let level = match args.verbosity {
+        0 => LevelFilter::WARN,
+        1 => LevelFilter::INFO,
+        2 => LevelFilter::DEBUG,
+        _ => LevelFilter::TRACE,
+    };
+
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(level)
+        .with_span_events(FmtSpan::FULL)
+        .with_timer(SystemTime)
+        .finish();
+    let () = set_global_subscriber(subscriber).expect("failed to set tracing subscriber");
+
     let freq = if args.freq < 1 { 1 } else { args.freq };
 
     let symbolizer = symbolize::Symbolizer::new();
