@@ -6,11 +6,11 @@ license = "GPL-2.0 OR BSD-3-Clause"
 edition = "2021"
 
 [dependencies]
-libbpf-rs = "0.19"
-nix = "0.24.1"
 blazesym = { path = "../../../blazesym", default-features = false, features = ["dont-generate-test-files"] }
+clap = { version = "4.0", features = ["derive"] }
+libbpf-rs = "0.19"
 libc = "*"
-clap = { version = "3.1.18", features = ["derive"] }
+nix = "0.24.1"
 
 [build-dependencies]
 libbpf-cargo = "0.13"
