@@ -3,6 +3,7 @@ name = "profile"
 version = "0.1.0"
 authors = ["Kuifeng Lee <kuifeng@fb.com>"]
 license = "GPL-2.0 OR BSD-3-Clause"
+edition = "2021"
 
 [dependencies]
 libbpf-rs = "0.19"
