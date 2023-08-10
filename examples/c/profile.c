@@ -55,32 +55,36 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 
 	for (i = 0; i < stack_sz; i++) {
 		if (!result || result->size <= i || !result->entries[i].size) {
-			printf("  %d [<%016llx>]\n", i, stack[i]);
+			printf(" %2d [<%016llx>]\n", i, stack[i]);
 			continue;
 		}
 
 		if (result->entries[i].size == 1) {
 			sym = &result->entries[i].syms[0];
-			if (sym->path && sym->path[0]) {
-				printf("  %d [<%016llx>] %s+0x%llx %s:%ld\n", i, stack[i],
-				       sym->symbol, stack[i] - sym->addr, sym->path,
-				       sym->line);
+
+			if (sym->dir && sym->dir[0] != '\0' && sym->file && sym->file[0] != '\0') {
+				printf(" %2d [<%016llx>] %s+0x%lx %s/%s:%u\n", i, stack[i],
+				       sym->name, sym->offset, sym->dir, sym->file, sym->line);
+			} else if (sym->file && sym->file[0] != '\0') {
+				printf(" %2d [<%016llx>] %s+0x%lx %s:%u\n", i, stack[i],
+				       sym->name, sym->offset, sym->file, sym->line);
 			} else {
-				printf("  %d [<%016llx>] %s+0x%llx\n", i, stack[i], sym->symbol,
-				       stack[i] - sym->addr);
+				printf(" %2d [<%016llx>] %s+0x%lx\n", i, stack[i], sym->name, sym->offset);
 			}
 			continue;
 		}
 
-		printf("  %d [<%016llx>]\n", i, stack[i]);
+		printf(" %2d [<%016llx>]\n", i, stack[i]);
 		for (j = 0; j < result->entries[i].size; j++) {
 			sym = &result->entries[i].syms[j];
-			if (sym->path && sym->path[0]) {
-				printf("        %s+0x%llx %s:%ld\n", sym->symbol,
-				       stack[i] - sym->addr, sym->path, sym->line);
+			if (sym->dir && sym->dir[0] != '\0' && sym->file && sym->file[0] != '\0') {
+				printf("        %s+0x%lx %s/%s:%u\n", sym->name,
+				       sym->offset, sym->dir, sym->file, sym->line);
+			} else if (sym->file && sym->file[0] != '\0') {
+				printf("        %s+0x%lx %s:%u\n", sym->name,
+				       sym->offset, sym->file, sym->line);
 			} else {
-				printf("        %s+0x%llx\n", sym->symbol,
-				       stack[i] - sym->addr);
+				printf("        %s+0x%lx\n", sym->name, sym->offset);
 			}
 		}
 	}

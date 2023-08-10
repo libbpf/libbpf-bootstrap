@@ -6,7 +6,7 @@ license = "GPL-2.0 OR BSD-3-Clause"
 edition = "2021"
 
 [dependencies]
-blazesym = { path = "../../../blazesym", default-features = false, features = ["dont-generate-test-files"] }
+blazesym = { path = "../../../blazesym" }
 clap = { version = "4.0", features = ["derive"] }
 libbpf-rs = "0.19"
 libc = "*"
