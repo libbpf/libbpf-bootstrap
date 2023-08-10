@@ -6,24 +6,17 @@ use std::mem;
 use std::result::Result;
 use std::time::Duration;
 
-extern crate nix;
-use nix::unistd::close;
+use blazesym::symbolize;
 
-extern crate libbpf_rs;
-
-extern crate clap;
 use clap::Parser;
+
+use nix::unistd::close;
 
 #[path = "bpf/.output/profile.skel.rs"]
 mod profile;
-use profile::*;
-
-extern crate blazesym;
-use blazesym::symbolize;
-
-extern crate libc;
-
 mod syscall;
+
+use profile::*;
 
 const MAX_STACK_DEPTH: usize = 128;
 const TASK_COMM_LEN: usize = 16;
