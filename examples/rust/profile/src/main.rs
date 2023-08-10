@@ -89,7 +89,14 @@ fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32)
         symbolize::Source::from(symbolize::Process::new(pid.into()))
     };
 
-    let syms = symbolizer.symbolize(&src, stack).unwrap();
+    let syms = match symbolizer.symbolize(&src, stack) {
+        Ok(syms) => syms,
+        Err(err) => {
+            eprintln!("  failed to symbolize addresses: {err:#}");
+            return
+        },
+    };
+
     for i in 0..stack.len() {
         if syms.len() <= i || syms[i].len() == 0 {
             println!("  {} [<{:016x}>]", i, stack[i]);
