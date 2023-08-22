@@ -8,7 +8,7 @@ ARG SHORTNAME="jammy"
 ENV SHORTNAME=$SHORTNAME
 
 RUN apt-get update && apt-get install -y curl gnupg
-RUN if [ "${LLVM_VERSION}" = "17" ]; \
+RUN if [ "${LLVM_VERSION}" = "18" ]; \
     then \
         echo "\n\
 deb http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME} main\n\
