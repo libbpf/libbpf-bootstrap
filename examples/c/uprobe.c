@@ -15,6 +15,8 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 /* It's a global function to make sure compiler doesn't inline it. */
 int uprobed_add(int a, int b)
 {
+	printf("Triggering user function test_func, addr %p...\n",
+	       (const void *)&uprobed_add);
 	return a + b;
 }
 
