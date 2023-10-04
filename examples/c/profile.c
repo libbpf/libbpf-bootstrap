@@ -34,8 +34,33 @@ static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu
 
 static struct blaze_symbolizer *symbolizer;
 
+static void print_frame(const char *name, uintptr_t input_addr, uintptr_t addr, uint64_t offset, const blaze_symbolize_code_info* code_info)
+{
+    // If we have an input address  we have a new symbol.
+    if (input_addr != 0) {
+      printf("%016lx: %s @ 0x%lx+0x%lx", input_addr, name, addr, offset);
+			if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
+				printf(" %s/%s:%u\n", code_info->dir, code_info->file, code_info->line);
+      } else if (code_info != NULL && code_info->file != NULL) {
+				printf(" %s:%u\n", code_info->file, code_info->line);
+      } else {
+				printf("\n");
+      }
+    } else {
+      printf("%016s  %s", "", name);
+			if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
+				printf("@ %s/%s:%u [inlined]\n", code_info->dir, code_info->file, code_info->line);
+      } else if (code_info != NULL && code_info->file != NULL) {
+				printf("@ %s:%u [inlined]\n", code_info->file, code_info->line);
+      } else {
+				printf("[inlined]\n");
+      }
+    }
+}
+
 static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 {
+  const struct blaze_symbolize_inlined_fn* inlined;
 	const struct blaze_result *result;
 	const struct blaze_sym *sym;
 	int i, j;
@@ -54,39 +79,18 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 
 
 	for (i = 0; i < stack_sz; i++) {
-		if (!result || result->size <= i || !result->entries[i].size) {
+		if (!result || result->cnt <= i || result->syms[i].name == NULL) {
 			printf(" %2d [<%016llx>]\n", i, stack[i]);
 			continue;
 		}
 
-		if (result->entries[i].size == 1) {
-			sym = &result->entries[i].syms[0];
+    sym = &result->syms[i];
+    print_frame(sym->name, stack[i], sym->addr, sym->offset, &sym->code_info);
 
-			if (sym->dir && sym->dir[0] != '\0' && sym->file && sym->file[0] != '\0') {
-				printf(" %2d [<%016llx>] %s+0x%lx %s/%s:%u\n", i, stack[i],
-				       sym->name, sym->offset, sym->dir, sym->file, sym->line);
-			} else if (sym->file && sym->file[0] != '\0') {
-				printf(" %2d [<%016llx>] %s+0x%lx %s:%u\n", i, stack[i],
-				       sym->name, sym->offset, sym->file, sym->line);
-			} else {
-				printf(" %2d [<%016llx>] %s+0x%lx\n", i, stack[i], sym->name, sym->offset);
-			}
-			continue;
-		}
-
-		printf(" %2d [<%016llx>]\n", i, stack[i]);
-		for (j = 0; j < result->entries[i].size; j++) {
-			sym = &result->entries[i].syms[j];
-			if (sym->dir && sym->dir[0] != '\0' && sym->file && sym->file[0] != '\0') {
-				printf("        %s+0x%lx %s/%s:%u\n", sym->name,
-				       sym->offset, sym->dir, sym->file, sym->line);
-			} else if (sym->file && sym->file[0] != '\0') {
-				printf("        %s+0x%lx %s:%u\n", sym->name,
-				       sym->offset, sym->file, sym->line);
-			} else {
-				printf("        %s+0x%lx\n", sym->name, sym->offset);
-			}
-		}
+    for (j = 0; j < sym->inlined_cnt; j++) {
+      inlined = &sym->inlined[j];
+      print_frame(sym->name, 0, 0, 0, &inlined->code_info);
+    }
 	}
 
 	blaze_result_free(result);

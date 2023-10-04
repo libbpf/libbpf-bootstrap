@@ -1,6 +1,5 @@
 use std::io::Error;
 use std::mem;
-use std::path::PathBuf;
 use std::time::Duration;
 
 use blazesym::symbolize;
@@ -24,6 +23,7 @@ use profile::*;
 
 const MAX_STACK_DEPTH: usize = 128;
 const TASK_COMM_LEN: usize = 16;
+const ADDR_WIDTH: usize = 16;
 
 // A Rust version of stacktrace_event in profile.h
 #[repr(C)]
@@ -69,6 +69,39 @@ fn attach_perf_event(
         .collect()
 }
 
+fn print_frame(name: &str, addr_info: Option<(blazesym::Addr, blazesym::Addr, usize)>, code_info: &Option<symbolize::CodeInfo>) {
+    let code_info = code_info.as_ref().map(|code_info| {
+        let path = code_info.to_path();
+        let path = path.display();
+
+        match (code_info.line, code_info.column) {
+            (Some(line), Some(col)) => format!(" {path}:{line}:{col}"),
+            (Some(line), None) => format!(" {path}:{line}"),
+            (None, _) => format!(" {path}"),
+        }
+    });
+
+    if let Some((input_addr, addr, offset)) = addr_info {
+        // If we have various address information bits we have a new symbol.
+        println!(
+            "{input_addr:#0width$x}: {name} @ {addr:#x}+{offset:#x}{code_info}",
+            code_info = code_info.as_deref().unwrap_or(""),
+            width = ADDR_WIDTH
+        )
+    } else {
+        // Otherwise we are dealing with an inlined call.
+        println!(
+            "{:width$}  {name}{code_info} [inlined]",
+            " ",
+            code_info = code_info
+                .map(|info| format!(" @{info}"))
+                .as_deref()
+                .unwrap_or(""),
+            width = ADDR_WIDTH
+        )
+    }
+}
+
 // Pid 0 means a kernel space stack.
 fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32) {
     let converted_stack;
@@ -101,36 +134,23 @@ fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32)
         }
     };
 
-    for (i, (addr, syms)) in stack.iter().zip(syms).enumerate() {
-        let mut addr_fmt = format!(" {i:2} [<{addr:016x}>]");
-        if syms.is_empty() {
-            println!("{addr_fmt}")
-        } else {
-            for (i, sym) in syms.into_iter().enumerate() {
-                if i == 1 {
-                    addr_fmt = addr_fmt.replace(|_c| true, " ");
+    for (input_addr, sym) in stack.iter().copied().zip(syms) {
+        match sym {
+            symbolize::Symbolized::Sym(symbolize::Sym {
+                name,
+                addr,
+                offset,
+                code_info,
+                inlined,
+                ..
+            }) => {
+                print_frame(&name, Some((input_addr, addr, offset)), &code_info);
+                for frame in inlined.iter() {
+                    print_frame(&frame.name, None, &frame.code_info);
                 }
-
-                let path = match (sym.dir, sym.file) {
-                    (Some(dir), Some(file)) => Some(dir.join(file)),
-                    (dir, file) => dir.or_else(|| file.map(PathBuf::from)),
-                };
-
-                let src_loc = if let (Some(path), Some(line)) = (path, sym.line) {
-                    if let Some(col) = sym.column {
-                        format!(" {}:{line}:{col}", path.display())
-                    } else {
-                        format!(" {}:{line}", path.display())
-                    }
-                } else {
-                    String::new()
-                };
-
-                let symbolize::Sym {
-                    name, addr, offset, ..
-                } = sym;
-
-                println!("{addr_fmt} {name} @ {addr:#x}+{offset:#x}{src_loc}");
+            }
+            symbolize::Symbolized::Unknown => {
+                println!("{input_addr:#0width$x}: <no-symbol>", width = ADDR_WIDTH)
             }
         }
     }
