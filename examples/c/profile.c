@@ -47,7 +47,7 @@ static void print_frame(const char *name, uintptr_t input_addr, uintptr_t addr, 
 				printf("\n");
       }
     } else {
-      printf("%016s  %s", "", name);
+      printf("%16s  %s", "", name);
 			if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
 				printf("@ %s/%s:%u [inlined]\n", code_info->dir, code_info->file, code_info->line);
       } else if (code_info != NULL && code_info->file != NULL) {
