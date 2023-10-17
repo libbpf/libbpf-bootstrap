@@ -5,7 +5,7 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/usdt.bpf.h>
 
-pid_t my_pid;
+pid_t my_pid = 0;
 
 SEC("usdt/libc.so.6:libc:setjmp")
 int BPF_USDT(usdt_auto_attach, void *arg1, int arg2, void *arg3)
