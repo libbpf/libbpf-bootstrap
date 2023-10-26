@@ -141,7 +141,7 @@ endif()
 
 # Get target arch
 execute_process(COMMAND uname -m
-  COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/"
+  COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/" -e "s/riscv64/riscv/"
   OUTPUT_VARIABLE ARCH_output
   ERROR_VARIABLE ARCH_error
   RESULT_VARIABLE ARCH_result
