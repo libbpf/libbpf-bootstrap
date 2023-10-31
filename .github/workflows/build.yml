@@ -53,3 +53,15 @@ jobs:
           build_container \
           /bin/bash -c \
           'cd /libbpf-bootstrap/examples/rust && cargo build'
+    - name: Build xmake android examples/c
+      run: |
+        docker run \
+          -v $(pwd):/libbpf-bootstrap \
+          build_container \
+          /bin/bash -c \
+          'curl -fsSL https://xmake.io/shget.text | bash && source ~/.xmake/profile'
+        docker run \
+          -v $(pwd):/libbpf-bootstrap \
+          build_container \
+          /bin/bash -c \
+          'cd /libbpf-bootstrap/examples/c && xmake f -p android && xmake'
