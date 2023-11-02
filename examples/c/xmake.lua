@@ -9,7 +9,7 @@ if xmake.version():satisfies(">=2.5.7 <=2.5.9") then
 end
 
 option("system-libbpf",      {showmenu = true, default = false, description = "Use system-installed libbpf"})
-option("require-bpftool",    {showmenu = true, default = true, description = "Require bpftool package"})
+option("require-bpftool",    {showmenu = true, default = false, description = "Require bpftool package"})
 
 add_requires("elfutils", "zlib")
 if is_plat("android") then
@@ -20,6 +20,10 @@ else
     set_toolchains("@llvm")
     add_requires("linux-headers")
 end
+
+-- fix error: libbpf: map 'my_pid_map': unsupported map linkage static. for bpftool >= 7.2.0
+-- we cannot add `"-fvisibility=hidden"` when compiling *.bpf.c
+set_symbols("none")
 
 if is_arch("arm64", "arm64-v8a") then
     add_includedirs("../../vmlinux/arm64")

@@ -28,4 +28,4 @@ jobs:
           && sudo apt-get -y clean
     - name: Build xmake android examples/c
       run: |
-        cd examples/c && xmake f -p android -a ${{ matrix.arch }} -y && xmake -y
+        cd examples/c && xmake f -p android -a ${{ matrix.arch }} --require-bpftool=y -y && xmake -y
