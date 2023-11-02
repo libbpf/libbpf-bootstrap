@@ -21,7 +21,21 @@ else
     add_requires("linux-headers")
 end
 
-add_includedirs("../../vmlinux")
+if is_arch("arm64", "arm64-v8a") then
+    add_includedirs("../../vmlinux/arm64")
+elseif is_arch("arm.*") then
+    add_includedirs("../../vmlinux/arm")
+elseif is_arch("riscv32", "riscv64") then
+    add_includedirs("../../vmlinux/riscv")
+elseif is_arch("loongarch") then
+    add_includedirs("../../vmlinux/loongarch")
+elseif is_arch("ppc", "powerpc") then
+    add_includedirs("../../vmlinux/powerpc")
+elseif is_arch("x86_64", "i386") then
+    add_includedirs("../../vmlinux/x86")
+else
+    add_includedirs("../../vmlinux")
+end
 
 -- we can run `xmake f --require-bpftool=y` to pull bpftool from xmake-repo repository
 if has_config("require-bpftool") then

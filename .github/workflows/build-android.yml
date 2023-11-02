@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [armeabi-v7a, x86_64]
+        arch: [armeabi-v7a, arm64-v8a, x86_64]
     steps:
     - uses: actions/checkout@v2
       with:
@@ -23,9 +23,9 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update -y && sudo apt-get install -yqq \
-          build-essential clang llvm libelf1 libelf-dev zlib1g-dev libc++-dev libc++abi-dev \
+          build-essential clang llvm zlib1g-dev libc++-dev libc++abi-dev \
           sudo \
           && sudo apt-get -y clean
     - name: Build xmake android examples/c
       run: |
-        cd examples/c && xmake f -p android -a ${{ matrix.arch }} -m release -y && xmake -y
+        cd examples/c && xmake f -p android -a ${{ matrix.arch }} --require-bpftool=y -y && xmake -y
