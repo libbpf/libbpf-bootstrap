@@ -9,7 +9,7 @@ if xmake.version():satisfies(">=2.5.7 <=2.5.9") then
 end
 
 option("system-libbpf",      {showmenu = true, default = false, description = "Use system-installed libbpf"})
-option("require-bpftool",    {showmenu = true, default = false, description = "Require bpftool package"})
+option("require-bpftool",    {showmenu = true, default = true, description = "Require bpftool package"})
 
 add_requires("elfutils", "zlib")
 if is_plat("android") then
