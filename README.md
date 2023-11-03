@@ -303,6 +303,21 @@ interface:lo    protocol: UDP   127.0.0.1:51845(src) -> 127.0.0.1:53(dst)
 interface:lo    protocol: UDP   127.0.0.1:41552(src) -> 127.0.0.1:53(dst)
 ```
 
+## task_iter
+
+`task_iter` is an example of using [BPF Iterators](https://docs.kernel.org/bpf/bpf_iterators.html). 
+This example iterates over all tasks on the host and gets their pid, process name, 
+kernel stack, and their state. Note: you can use BlazeSym to symbolize the kernel stacktraces 
+(like in `profile`) but that code is omitted for simplicity.
+
+```shell
+$ sudo ./task_iter
+Task Info. Pid: 3647645. Process Name: TTLSFWorker59. Kernel Stack Len: 3. State: INTERRUPTIBLE
+Task Info. Pid: 1600495. Process Name: tmux: client. Kernel Stack Len: 6. State: INTERRUPTIBLE
+Task Info. Pid: 1600497. Process Name: tmux: server. Kernel Stack Len: 0. State: RUNNING
+Task Info. Pid: 1600498. Process Name: bash. Kernel Stack Len: 5. State: INTERRUPTIBLE
+```
+
 # Building
 
 libbpf-bootstrap supports multiple build systems that do the same thing.
