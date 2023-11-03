@@ -10,5 +10,6 @@
 /sockfilter
 /tc
 /ksyscall
+/task_iter
 /cmake-build-debug/
 /cmake-build-release/
