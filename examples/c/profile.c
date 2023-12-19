@@ -71,16 +71,16 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 		struct blaze_symbolize_src_process src = {
 			.pid = pid,
 		};
-		result = blaze_symbolize_process(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
+		result = blaze_symbolize_process_virt_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	} else {
 		struct blaze_symbolize_src_kernel src = {};
-		result = blaze_symbolize_kernel(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
+		result = blaze_symbolize_kernel_virt_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	}
 
 
 	for (i = 0; i < stack_sz; i++) {
 		if (!result || result->cnt <= i || result->syms[i].name == NULL) {
-			printf(" %2d [<%016llx>]\n", i, stack[i]);
+			printf("%016llx: <no-symbol>\n", stack[i]);
 			continue;
 		}
 
