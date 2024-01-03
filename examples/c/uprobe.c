@@ -12,14 +12,19 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-/* It's a global function to make sure compiler doesn't inline it. */
-int uprobed_add(int a, int b)
+/* It's a global function to make sure compiler doesn't inline it. To be extra
+ * sure we also use "asm volatile" and noinline attributes to prevent
+ * compiler from local inlining.
+ */
+__attribute__((noinline)) int uprobed_add(int a, int b)
 {
+	asm volatile ("");
 	return a + b;
 }
 
-int uprobed_sub(int a, int b)
+__attribute__((noinline)) int uprobed_sub(int a, int b)
 {
+	asm volatile ("");
 	return a - b;
 }
 
