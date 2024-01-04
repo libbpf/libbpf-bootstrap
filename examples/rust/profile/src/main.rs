@@ -1,4 +1,4 @@
-use std::io::Error;
+use std::io;
 use std::mem;
 use std::time::Duration;
 
@@ -9,6 +9,7 @@ use clap::Parser;
 
 use libbpf_rs::skel::OpenSkel as _;
 use libbpf_rs::skel::SkelBuilder as _;
+use libbpf_rs::ErrorExt as _;
 
 use nix::unistd::close;
 
@@ -40,7 +41,7 @@ struct stacktrace_event {
     ustack: [u64; MAX_STACK_DEPTH],
 }
 
-fn init_perf_monitor(freq: u64) -> Vec<i32> {
+fn init_perf_monitor(freq: u64) -> Result<Vec<i32>, libbpf_rs::Error> {
     let nprocs = libbpf_rs::num_possible_cpus().unwrap();
     let pid = -1;
     let buf: Vec<u8> = vec![0; mem::size_of::<syscall::perf_event_attr>()];
@@ -56,8 +57,13 @@ fn init_perf_monitor(freq: u64) -> Vec<i32> {
     attr.flags = 1 << 10; // freq = 1
     (0..nprocs)
         .map(|cpu| {
-            let fd = syscall::perf_event_open(attr.as_ref(), pid, cpu as i32, -1, 0);
-            fd as i32
+            let fd = syscall::perf_event_open(attr.as_ref(), pid, cpu as i32, -1, 0) as i32;
+            if fd == -1 {
+                Err(libbpf_rs::Error::from(io::Error::last_os_error()))
+                    .context("failed to open perf event")
+            } else {
+                Ok(fd)
+            }
         })
         .collect()
 }
@@ -72,7 +78,11 @@ fn attach_perf_event(
         .collect()
 }
 
-fn print_frame(name: &str, addr_info: Option<(blazesym::Addr, blazesym::Addr, usize)>, code_info: &Option<symbolize::CodeInfo>) {
+fn print_frame(
+    name: &str,
+    addr_info: Option<(blazesym::Addr, blazesym::Addr, usize)>,
+    code_info: &Option<symbolize::CodeInfo>,
+) {
     let code_info = code_info.as_ref().map(|code_info| {
         let path = code_info.to_path();
         let path = path.display();
@@ -175,9 +185,7 @@ fn event_handler(symbolizer: &symbolize::Symbolizer, data: &[u8]) -> ::std::os::
         return 1;
     }
 
-    let comm = std::str::from_utf8(&event.comm)
-        .or::<Error>(Ok("<unknown>"))
-        .unwrap();
+    let comm = std::str::from_utf8(&event.comm).unwrap_or("<unknown>");
     println!("COMM: {} (pid={}) @ CPU {}", comm, event.pid, event.cpu_id);
 
     if event.kstack_size > 0 {
@@ -216,7 +224,7 @@ struct Args {
     verbosity: u8,
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), libbpf_rs::Error> {
     let args = Args::parse();
     let level = match args.verbosity {
         0 => LevelFilter::WARN,
@@ -240,21 +248,22 @@ fn main() -> Result<(), Error> {
     let open_skel = skel_builder.open().unwrap();
     let mut skel = open_skel.load().unwrap();
 
-    let pefds = init_perf_monitor(freq);
+    let pefds = init_perf_monitor(freq)?;
     let _links = attach_perf_event(&pefds, skel.progs_mut().profile());
 
     let maps = skel.maps();
     let mut builder = libbpf_rs::RingBufferBuilder::new();
     builder
-        .add(maps.events(), move |data| {
-            event_handler(&symbolizer, data)
-        })
+        .add(maps.events(), move |data| event_handler(&symbolizer, data))
         .unwrap();
     let ringbuf = builder.build().unwrap();
     while ringbuf.poll(Duration::MAX).is_ok() {}
 
     for pefd in pefds {
-        close(pefd)?;
+        close(pefd)
+            .map_err(io::Error::from)
+            .map_err(libbpf_rs::Error::from)
+            .context("failed to close perf event")?;
     }
 
     Ok(())
