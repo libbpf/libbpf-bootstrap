@@ -104,6 +104,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo_metadata"
+version = "0.15.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eee4243f1f26fc7a42710e7439c149e2b10b05472f88090acce52632f231a73a"
+dependencies = [
+ "camino",
+ "cargo-platform",
+ "semver",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -407,7 +421,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa9bdbd32bc3fd6a2b6ca7a73cf1a4976c1da51be8367849226573348f338ec0"
 dependencies = [
  "anyhow",
- "cargo_metadata",
+ "cargo_metadata 0.14.2",
  "clap 3.2.17",
  "libbpf-sys",
  "memmap2",
@@ -423,6 +437,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "libbpf-cargo"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e952c4449995609ffff93094d15612736472cb12c5aa1f05bdebae3ffc8a6363"
+dependencies = [
+ "anyhow",
+ "cargo_metadata 0.15.4",
+ "clap 4.1.11",
+ "libbpf-rs 0.22.0",
+ "libbpf-sys",
+ "memmap2",
+ "num_enum",
+ "regex",
+ "scroll",
+ "scroll_derive",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "libbpf-rs"
 version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -433,7 +469,24 @@ dependencies = [
  "libbpf-sys",
  "nix 0.24.2",
  "num_enum",
- "strum_macros",
+ "strum_macros 0.23.1",
+ "thiserror",
+ "vsprintf",
+]
+
+[[package]]
+name = "libbpf-rs"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8af3184e3e4642c2065c44949ba2897be063909e9a5b2aad840a6935d727fe5e"
+dependencies = [
+ "bitflags 2.3.3",
+ "lazy_static",
+ "libbpf-sys",
+ "libc",
+ "nix 0.27.1",
+ "num_enum",
+ "strum_macros 0.24.3",
  "thiserror",
  "vsprintf",
 ]
@@ -450,9 +503,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.139"
+version = "0.2.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
+checksum = "302d7ab3130588088d277783b1e2d2e10c9e9e4a16dd9050e6ec93fb3e7048f4"
 
 [[package]]
 name = "linux-raw-sys"
@@ -500,6 +553,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memoffset"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -517,7 +579,7 @@ dependencies = [
  "bitflags 1.3.2",
  "cfg-if",
  "libc",
- "memoffset",
+ "memoffset 0.6.5",
 ]
 
 [[package]]
@@ -530,6 +592,18 @@ dependencies = [
  "bitflags 1.3.2",
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.3.3",
+ "cfg-if",
+ "libc",
+ "memoffset 0.9.0",
 ]
 
 [[package]]
@@ -659,8 +733,8 @@ version = "0.1.0"
 dependencies = [
  "blazesym",
  "clap 4.1.11",
- "libbpf-cargo",
- "libbpf-rs",
+ "libbpf-cargo 0.22.0",
+ "libbpf-rs 0.22.0",
  "libc",
  "nix 0.24.2",
  "tracing",
@@ -880,6 +954,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "strum_macros"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+dependencies = [
+ "heck 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -973,8 +1060,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ctrlc",
- "libbpf-cargo",
- "libbpf-rs",
+ "libbpf-cargo 0.13.1",
+ "libbpf-rs 0.19.1",
  "libc",
  "object",
  "plain",
@@ -1258,8 +1345,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ctrlc",
- "libbpf-cargo",
- "libbpf-rs",
+ "libbpf-cargo 0.13.1",
+ "libbpf-rs 0.19.1",
  "libc",
  "structopt",
 ]

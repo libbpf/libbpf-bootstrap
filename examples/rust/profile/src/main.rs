@@ -7,6 +7,9 @@ use blazesym::symbolize;
 use clap::ArgAction;
 use clap::Parser;
 
+use libbpf_rs::skel::OpenSkel as _;
+use libbpf_rs::skel::SkelBuilder as _;
+
 use nix::unistd::close;
 
 use tracing::subscriber::set_global_default as set_global_subscriber;
@@ -240,9 +243,10 @@ fn main() -> Result<(), Error> {
     let pefds = init_perf_monitor(freq);
     let _links = attach_perf_event(&pefds, skel.progs_mut().profile());
 
+    let maps = skel.maps();
     let mut builder = libbpf_rs::RingBufferBuilder::new();
     builder
-        .add(skel.maps().events(), move |data| {
+        .add(maps.events(), move |data| {
             event_handler(&symbolizer, data)
         })
         .unwrap();
