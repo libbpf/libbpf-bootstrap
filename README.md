@@ -322,6 +322,33 @@ Task Info. Pid: 1600497. Process Name: tmux: server. Kernel Stack Len: 0. State:
 Task Info. Pid: 1600498. Process Name: bash. Kernel Stack Len: 5. State: INTERRUPTIBLE
 ```
 
+## lsm
+`lsm` serves as an illustrative example of utilizing [LSM BPF](https://docs.kernel.org/bpf/prog_lsm.html). In this example, the `bpf()` system call is effectively blocked. Once the `lsm` program is operational, its successful execution can be confirmed by using the `bpftool prog list` command.
+
+```shell
+$ sudo ./lsm
+libbpf: loading object 'lsm_bpf' from buffer
+...
+Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` to see output of the BPF programs.
+..........
+```
+
+The output from `lsm` in `/sys/kernel/debug/tracing/trace_pipe` is expected to resemble the following:
+
+````shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+         bpftool-70646   [002] ...11 279318.416393: bpf_trace_printk: LSM: block bpf() worked
+         bpftool-70646   [002] ...11 279318.416532: bpf_trace_printk: LSM: block bpf() worked
+         bpftool-70646   [002] ...11 279318.416533: bpf_trace_printk: LSM: block bpf() worked
+````
+
+When the `bpf()` system call gets blocked, the `bpftool prog list` command yields the following output:
+
+```shell
+$ sudo bpftool prog list
+Error: can't get next program: Operation not permitted
+```
+
 # Building
 
 libbpf-bootstrap supports multiple build systems that do the same thing.
