@@ -11,5 +11,6 @@
 /tc
 /ksyscall
 /task_iter
+/lsm
 /cmake-build-debug/
 /cmake-build-release/
