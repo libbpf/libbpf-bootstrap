@@ -19,7 +19,7 @@ fn main() {
     let skel = Path::new("./src/bpf/.output/profile.skel.rs");
     SkeletonBuilder::new()
         .source(SRC)
-        .build_and_generate(&skel)
+        .build_and_generate(skel)
         .expect("bpf compilation failed");
     println!("cargo:rerun-if-changed={}", SRC);
 }
