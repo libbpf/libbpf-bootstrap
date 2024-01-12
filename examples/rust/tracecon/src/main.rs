@@ -11,8 +11,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use structopt::StructOpt;
 
-#[path = "bpf/.output/tracecon.skel.rs"]
-mod tracecon;
+mod tracecon {
+    include!(concat!(env!("OUT_DIR"), "/tracecon.skel.rs"));
+}
 use tracecon::*;
 
 type Event = tracecon_bss_types::event;

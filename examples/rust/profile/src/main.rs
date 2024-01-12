@@ -19,8 +19,9 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::time::SystemTime;
 use tracing_subscriber::FmtSubscriber;
 
-#[path = "bpf/.output/profile.skel.rs"]
-mod profile;
+mod profile {
+    include!(concat!(env!("OUT_DIR"), "/profile.skel.rs"));
+}
 mod syscall;
 
 use profile::*;
