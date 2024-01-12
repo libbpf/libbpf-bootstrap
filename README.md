@@ -268,25 +268,29 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 
 ## profile
 
-`profile` is an example written in Rust and C with BlazeSym. It
+`profile` is an example written in Rust and C using the
+[`blazesym`](https://github.com/libbpf/blazesym) symbolization library. It
 attaches to perf events, sampling on every processor periodically. It
-shows addresses, symbols, file names, and line numbers of stacktraces.
+shows addresses, symbols, file names, and line numbers of stacktraces (if
+available).
 
 ```shell
 $ sudo ./target/release/profile
-COMM: swapper/6 (pid=0) @ CPU 6
+COMM: swapper/2 (pid=0) @ CPU 2
 Kernel:
-  0 [<ffffffff81bdf010>] intel_idle+0x96
-  1 [<ffffffff819959b0>] cpuidle_enter_state+0x80 /ro/source/drivers/cpuidle/cpuidle.c:238
-  2 [<ffffffff81995cc9>] cpuidle_enter+0x29 /ro/source/drivers/cpuidle/cpuidle.c:353
-  3 [<ffffffff810f8c0b>] do_idle+0x1bb /ro/source/kernel/sched/idle.c:243
-  4 [<ffffffff810f8de9>] cpu_startup_entry+0x19 /ro/source/kernel/sched/idle.c:396
-  5 [<ffffffff81044f46>] start_secondary+0x116 /ro/source/arch/x86/kernel/smpboot.c:272
-  6 [<ffffffff810000f5>] secondary_startup_64_no_verify+0xb0 /ro/source/arch/x86/kernel/head_64.S:283
+0xffffffffb59141f8: mwait_idle_with_hints.constprop.0 @ 0xffffffffb59141b0+0x48
+0xffffffffb5f731ce: intel_idle @ 0xffffffffb5f731b0+0x1e
+0xffffffffb5c7bf09: cpuidle_enter_state @ 0xffffffffb5c7be80+0x89
+0xffffffffb5c7c309: cpuidle_enter @ 0xffffffffb5c7c2e0+0x29
+0xffffffffb516f57c: do_idle @ 0xffffffffb516f370+0x20c
+0xffffffffb516f829: cpu_startup_entry @ 0xffffffffb516f810+0x19
+0xffffffffb5075bfa: start_secondary @ 0xffffffffb5075ae0+0x11a
+0xffffffffb500015a: secondary_startup_64_no_verify @ 0xffffffffb5000075+0xe5
 No Userspace Stack
 ```
 
-C version and Rust version show the same content.  Both of them use BlazeSym to symbolize stacktraces.
+C version and Rust version show the same content. Both of them use `blazesym`
+to symbolize stacktraces.
 
 ## sockfilter
 
