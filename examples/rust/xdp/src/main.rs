@@ -5,8 +5,9 @@ use std::{thread, time};
 use anyhow::{bail, Result};
 use structopt::StructOpt;
 
-#[path = "bpf/.output/xdppass.skel.rs"]
-mod xdppass;
+mod xdppass {
+    include!(concat!(env!("OUT_DIR"), "/xdppass.skel.rs"));
+}
 use xdppass::*;
 
 #[derive(Debug, StructOpt)]
