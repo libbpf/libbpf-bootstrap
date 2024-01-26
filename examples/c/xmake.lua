@@ -13,7 +13,7 @@ option("require-bpftool",    {showmenu = true, default = false, description = "R
 
 add_requires("elfutils", "zlib")
 if is_plat("android") then
-    add_requires("ndk >=22.x", "argp-standalone")
+    add_requires("ndk >=22.x <26", "argp-standalone")
     set_toolchains("@ndk", {sdkver = "23"})
 else
     add_requires("llvm >=10.x")
