@@ -119,7 +119,7 @@ fn print_frame(
 // Pid 0 means a kernel space stack.
 fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32) {
     let converted_stack;
-    // The kernel always reports `u64` addresses, whereas blazesym uses `usize`.
+    // The kernel always reports `u64` addresses, whereas blazesym uses `Addr`.
     // Convert the stack trace as necessary.
     let stack = if mem::size_of::<blazesym::Addr>() != mem::size_of::<u64>() {
         converted_stack = stack
@@ -163,7 +163,7 @@ fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32)
                     print_frame(&frame.name, None, &frame.code_info);
                 }
             }
-            symbolize::Symbolized::Unknown => {
+            symbolize::Symbolized::Unknown(..) => {
                 println!("{input_addr:#0width$x}: <no-symbol>", width = ADDR_WIDTH)
             }
         }

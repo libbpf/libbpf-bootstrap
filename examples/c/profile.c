@@ -69,12 +69,15 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 
 	if (pid) {
 		struct blaze_symbolize_src_process src = {
+			.type_size = sizeof(src),
 			.pid = pid,
 		};
-		result = blaze_symbolize_process_virt_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
+		result = blaze_symbolize_process_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	} else {
-		struct blaze_symbolize_src_kernel src = {};
-		result = blaze_symbolize_kernel_virt_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
+		struct blaze_symbolize_src_kernel src = {
+			.type_size = sizeof(src),
+		};
+		result = blaze_symbolize_kernel_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	}
 
 
