@@ -63,7 +63,7 @@ checksum = "630be753d4e58660abd17930c71b647fe46c27ea6b63cc59e1e3851406972e42"
 
 [[package]]
 name = "blazesym"
-version = "0.2.0-alpha.8"
+version = "0.2.0-alpha.11"
 dependencies = [
  "cpp_demangle",
  "gimli",
