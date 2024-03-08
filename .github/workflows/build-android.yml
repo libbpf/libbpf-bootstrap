@@ -1,4 +1,4 @@
-name: libbpf-bootstrap android ubuntu_latest
+name: libbpf-bootstrap android build
 
 on:
   push:
