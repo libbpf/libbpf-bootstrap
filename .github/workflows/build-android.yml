@@ -5,6 +5,8 @@ on:
     branches:
       - master
   pull_request:
+  schedule:
+    - cron: '7 17 * * *'
 
 jobs:
   build_libbpf_bootstrap_android:
