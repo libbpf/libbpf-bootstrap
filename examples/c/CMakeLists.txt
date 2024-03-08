@@ -42,7 +42,7 @@ if(CARGO_EXISTS)
     PREFIX blazesym
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND cargo build --release
+    BUILD_COMMAND cargo build --package=blazesym-c --release
     BUILD_IN_SOURCE TRUE
     INSTALL_COMMAND ""
     STEP_TARGETS build
@@ -89,8 +89,8 @@ foreach(app ${apps})
   target_link_libraries(${app_stem} ${app_stem}_skel)
   if(${app_stem} STREQUAL profile)
     target_include_directories(${app_stem} PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/include)
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/capi/include)
     target_link_libraries(${app_stem}
-      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym.a -lpthread -lrt -ldl)
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym_c.a -lpthread -lrt -ldl)
   endif()
 endforeach()
