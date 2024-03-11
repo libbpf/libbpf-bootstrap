@@ -41,13 +41,20 @@ jobs:
           SHORTNAME=jammy
         file: ./.github/docker/Dockerfile.ubuntu
         tags: build_container
-    - name: Build examples/c
+    - name: Build examples/c -- GNU Make
       run: |
         docker run \
           -v $(pwd):/libbpf-bootstrap \
           build_container \
           /bin/bash -c \
           'cd /libbpf-bootstrap/examples/c && make -j`nproc`'
+    - name: Build examples/c -- CMake
+      run: |
+        docker run \
+          -v $(pwd):/libbpf-bootstrap \
+          build_container \
+          /bin/bash -c \
+          'cd /libbpf-bootstrap/examples/c && cmake ./ && make'
     - name: Build examples/rust
       run: |
         docker run \
