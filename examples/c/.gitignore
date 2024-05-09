@@ -2,6 +2,7 @@
 /bootstrap
 /minimal
 /minimal_legacy
+/minimal_ns
 /uprobe
 /kprobe
 /fentry
