@@ -4,4 +4,5 @@ members = [
   "tracecon",
   "xdp",
   "profile",
+  "hello-world", "unlink", "hashmap", "exitsnoop",
 ]

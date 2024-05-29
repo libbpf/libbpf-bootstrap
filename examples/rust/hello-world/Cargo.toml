@@ -1,0 +1,18 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+authors = ["huiming <yaohuiming789@gmail.com>"]
+edition = "2021"
+license = "GPL-2.0 OR BSD-3-Clause"
+
+[dependencies]
+anyhow = "1.0"
+libbpf-rs = "0.19"
+libc = "0.2"
+structopt = "0.3"
+ctrlc = "3.1"
+object = "0.25"
+plain = "0.2"
+
+[build-dependencies]
+libbpf-cargo = "0.13"

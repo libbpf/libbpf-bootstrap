@@ -1,0 +1,16 @@
+[package]
+name = "hashmap"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+libbpf-rs = "0.19"
+libc = "0.2"
+structopt = "0.3"
+ctrlc = "3.1"
+object = "0.25"
+plain = "0.2"
+
+[build-dependencies]
+libbpf-cargo = "0.13"

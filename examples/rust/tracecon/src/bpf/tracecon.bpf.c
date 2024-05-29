@@ -5,7 +5,7 @@
 #include <bpf/bpf_tracing.h>
 
 #define memcpy(dest, src, n) __builtin_memcpy((dest), (src), (n))
-#define HOSTNAME_LEN 84
+#define HOSTNAME_LEN	     84
 
 const volatile pid_t target_pid = 0;
 
@@ -113,7 +113,6 @@ cleanup:
 	bpf_map_delete_elem(&lookups, &tid);
 	return 0;
 }
-
 
 SEC("kprobe/tcp_v4_connect")
 int BPF_KPROBE(tcp_v4_connect_enter, struct sock *sk, struct sockaddr *uaddr, int addr_len)
