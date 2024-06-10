@@ -112,7 +112,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "blazesym"
-version = "0.2.0-alpha.12"
+version = "0.2.0-rc.0"
 dependencies = [
  "cpp_demangle",
  "gimli",
@@ -350,9 +350,9 @@ dependencies = [
 
 [[package]]
 name = "gimli"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
+checksum = "e2e1d97fbe9722ba9bbd0c97051c2956e726562b61f86a25a4360398a40edfc9"
 dependencies = [
  "fallible-iterator",
  "indexmap 2.2.6",
