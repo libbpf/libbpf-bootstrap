@@ -14,3 +14,6 @@
 /lsm
 /cmake-build-debug/
 /cmake-build-release/
+/uprobe-stress
+.gdb_history
+
