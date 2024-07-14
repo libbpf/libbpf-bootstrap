@@ -41,18 +41,19 @@ as the associated dependencies.
 
 .. code-block:: cmake
 
-  bpf_object(<name> <source>)
+  bpf_object(<name> <source> [<header> ...])
 
 Given an abstract ``<name>`` for a BPF object and the associated ``<source>``
 file, generates an interface library target, ``<name>_skel``, that may be
-linked against by other cmake targets.
+linked against by other cmake targets. Additional headers may be provided to 
+the macro to ensure that the generated skeleton is up-to-date.
 
 Example Usage:
 
 ::
 
   find_package(BpfObject REQUIRED)
-  bpf_object(myobject myobject.bpf.c)
+  bpf_object(myobject myobject.bpf.c myobject.h)
   add_executable(myapp myapp.c)
   target_link_libraries(myapp myobject_skel)
 
@@ -156,6 +157,9 @@ endif()
 # Public macro
 macro(bpf_object name input)
   set(BPF_C_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${input})
+  foreach(arg ${ARGN})
+    list(APPEND BPF_H_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${arg})
+  endforeach()
   set(BPF_O_FILE ${CMAKE_CURRENT_BINARY_DIR}/${name}.bpf.o)
   set(BPF_SKEL_FILE ${CMAKE_CURRENT_BINARY_DIR}/${name}.skel.h)
   set(OUTPUT_TARGET ${name}_skel)
@@ -167,7 +171,7 @@ macro(bpf_object name input)
             -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
     COMMAND_EXPAND_LISTS
     VERBATIM
-    DEPENDS ${BPF_C_FILE}
+    DEPENDS ${BPF_C_FILE} ${BPF_H_FILES}
     COMMENT "[clang] Building BPF object: ${name}")
 
   # Build BPF skeleton header
