@@ -80,6 +80,10 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 		result = blaze_symbolize_kernel_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	}
 
+	if (result == NULL) {
+		printf("  failed to symbolize addresses: %s\n", blaze_err_str(blaze_err_last()));
+		return;
+	}
 
 	for (i = 0; i < stack_sz; i++) {
 		if (!result || result->cnt <= i || result->syms[i].name == NULL) {
