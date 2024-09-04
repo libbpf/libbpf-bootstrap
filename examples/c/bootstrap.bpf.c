@@ -30,6 +30,13 @@ int handle_exec(struct trace_event_raw_sched_process_exec *ctx)
 	struct event *e;
 	pid_t pid;
 	u64 ts;
+	struct pt_regs *regs;
+	long ip;
+	int err;
+
+	err = bpf_probe_read_kernel(&regs, 8, ctx);
+	ip = PT_REGS_IP_CORE(regs);
+	bpf_printk("TRACEPOINT IP IS 0x%lx (err = %d)", ip, err);
 
 	/* remember time exec() was executed for this PID */
 	pid = bpf_get_current_pid_tgid() >> 32;

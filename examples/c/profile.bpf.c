@@ -21,6 +21,11 @@ int profile(void *ctx)
 	int cpu_id = bpf_get_smp_processor_id();
 	struct stacktrace_event *event;
 	int cp;
+	long ip;
+
+	ip = PT_REGS_IP(ctx);
+	bpf_printk("IP IS 0x%lx", ip);
+
 
 	event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
 	if (!event)
