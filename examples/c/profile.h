@@ -11,12 +11,33 @@
 #define MAX_STACK_DEPTH 128
 #endif
 
+#define MAX_THREAD_CNT 4096
+
+#define RINGBUF_SZ (4 * 1024 * 1024)
+
+enum task_status {
+	STATUS_ON_CPU,
+	STATUS_OFF_CPU,
+};
+
+enum event_kind {
+	EV_ON_CPU,
+	EV_OFF_CPU,
+	EV_TIMER,
+};
+
 typedef __u64 stack_trace_t[MAX_STACK_DEPTH];
 
-struct stacktrace_event {
-	__u32 pid;
+struct wprof_event {
+	enum event_kind kind;
 	__u32 cpu_id;
+	__u64 ts;
+	__u32 pid;
+	__u32 tgid;
 	char comm[TASK_COMM_LEN];
+
+	__u64 duration_ns;
+
 	__s32 kstack_sz;
 	__s32 ustack_sz;
 	stack_trace_t kstack;
