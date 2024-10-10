@@ -18,16 +18,7 @@ fn main() {
         .source(SRC)
         .clang_args(format!(
             "-I{}",
-            Path::new("../../../vmlinux")
-                .join(match arch.as_ref() {
-                    "aarch64" => "arm64",
-                    "loongarch64" => "loongarch",
-                    "powerpc64" => "powerpc",
-                    "riscv64" => "riscv",
-                    "x86_64" => "x86",
-                    _ => &arch,
-                })
-                .display()
+            Path::new("../../../vmlinux.h/include").join(arch).display()
         ))
         .build_and_generate(&out)
         .expect("bpf compilation failed");
