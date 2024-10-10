@@ -61,7 +61,7 @@ static void print_frame(const char *name, uintptr_t input_addr, uintptr_t addr, 
 static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 {
   const struct blaze_symbolize_inlined_fn* inlined;
-	const struct blaze_result *result;
+	const struct blaze_syms *syms;
 	const struct blaze_sym *sym;
 	int i, j;
 
@@ -72,26 +72,26 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 			.type_size = sizeof(src),
 			.pid = pid,
 		};
-		result = blaze_symbolize_process_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
+		syms = blaze_symbolize_process_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	} else {
 		struct blaze_symbolize_src_kernel src = {
 			.type_size = sizeof(src),
 		};
-		result = blaze_symbolize_kernel_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
+		syms = blaze_symbolize_kernel_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	}
 
-	if (result == NULL) {
+	if (syms == NULL) {
 		printf("  failed to symbolize addresses: %s\n", blaze_err_str(blaze_err_last()));
 		return;
 	}
 
 	for (i = 0; i < stack_sz; i++) {
-		if (!result || result->cnt <= i || result->syms[i].name == NULL) {
+		if (!syms || syms->cnt <= i || syms->syms[i].name == NULL) {
 			printf("%016llx: <no-symbol>\n", stack[i]);
 			continue;
 		}
 
-    sym = &result->syms[i];
+    sym = &syms->syms[i];
     print_frame(sym->name, stack[i], sym->addr, sym->offset, &sym->code_info);
 
     for (j = 0; j < sym->inlined_cnt; j++) {
@@ -100,7 +100,7 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
     }
 	}
 
-	blaze_result_free(result);
+	blaze_syms_free(syms);
 }
 
 /* Receive events from the ring buffer. */
