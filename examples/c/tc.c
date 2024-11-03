@@ -78,8 +78,13 @@ int main(int argc, char **argv)
 	}
 
 cleanup:
-	if (hook_created)
+	if (hook_created) {
+		/* Explicitly ask for the backing qdisc to be destroyed. Otherwise, only the BPF filters will be removed.
+		 * See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/
+		 */
+		tc_hook.attach_point = BPF_TC_INGRESS|BPF_TC_EGRESS;
 		bpf_tc_hook_destroy(&tc_hook);
+	}
 	tc_bpf__destroy(skel);
 	return -err;
 }
