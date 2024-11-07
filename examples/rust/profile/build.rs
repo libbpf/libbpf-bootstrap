@@ -1,4 +1,5 @@
 use std::env;
+use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -16,10 +17,10 @@ fn main() {
 
     SkeletonBuilder::new()
         .source(SRC)
-        .clang_args(format!(
-            "-I{}",
-            Path::new("../../../vmlinux.h/include").join(arch).display()
-        ))
+        .clang_args([
+            OsStr::new("-I"),
+            Path::new("../../../vmlinux.h/include").join(arch).as_os_str()
+        ])
         .build_and_generate(out)
         .expect("bpf compilation failed");
     println!("cargo:rerun-if-changed={}", SRC);

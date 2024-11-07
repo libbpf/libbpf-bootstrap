@@ -1,6 +1,9 @@
 use anyhow::{anyhow, bail, Context, Result};
 use core::time::Duration;
+use std::mem::MaybeUninit;
 use libbpf_rs::PerfBufferBuilder;
+use libbpf_rs::skel::SkelBuilder as _;
+use libbpf_rs::skel::OpenSkel as _;
 use object::Object;
 use object::ObjectSymbol;
 use plain::Plain;
@@ -16,7 +19,7 @@ mod tracecon {
 }
 use tracecon::*;
 
-type Event = tracecon_bss_types::event;
+type Event = tracecon::types::event;
 unsafe impl Plain for Event {}
 
 #[derive(Debug, StructOpt)]
@@ -84,34 +87,35 @@ fn main() -> Result<()> {
     }
 
     bump_memlock_rlimit()?;
-    let mut open_skel = skel_builder.open()?;
+    let mut open_object = MaybeUninit::uninit();
+    let open_skel = skel_builder.open(&mut open_object)?;
     if let Some(pid) = opts.pid {
-        open_skel.rodata().target_pid = pid;
+        open_skel.maps.rodata_data.target_pid = pid;
     }
-    let mut skel = open_skel.load()?;
+    let skel = open_skel.load()?;
     let address = get_symbol_address(&opts.glibc, "getaddrinfo")?;
 
     let _uprobe =
-        skel.progs_mut()
-            .getaddrinfo_enter()
+        skel.progs
+            .getaddrinfo_enter
             .attach_uprobe(false, -1, &opts.glibc, address)?;
 
     let _uretprobe =
-        skel.progs_mut()
-            .getaddrinfo_exit()
+        skel.progs
+            .getaddrinfo_exit
             .attach_uprobe(true, -1, &opts.glibc, address)?;
 
     let _kprobe = skel
-        .progs_mut()
-        .tcp_v4_connect_enter()
+        .progs
+        .tcp_v4_connect_enter
         .attach_kprobe(false, "tcp_v4_connect")?;
 
     let _kretprobe = skel
-        .progs_mut()
-        .tcp_v4_connect_exit()
+        .progs
+        .tcp_v4_connect_exit
         .attach_kprobe(true, "tcp_v4_connect")?;
 
-    let perf = PerfBufferBuilder::new(skel.maps_mut().events())
+    let perf = PerfBufferBuilder::new(&skel.maps.events)
         .sample_cb(handle_event)
         .build()?;
 
