@@ -1,8 +1,11 @@
+use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::{thread, time};
 
 use anyhow::{bail, Result};
+use libbpf_rs::skel::OpenSkel as _;
+use libbpf_rs::skel::SkelBuilder as _;
 use structopt::StructOpt;
 
 mod xdppass {
@@ -36,9 +39,10 @@ fn main() -> Result<()> {
     bump_memlock_rlimit()?;
 
     let skel_builder = XdppassSkelBuilder::default();
-    let open_skel = skel_builder.open()?;
+    let mut open_object = MaybeUninit::uninit();
+    let open_skel = skel_builder.open(&mut open_object)?;
     let mut skel = open_skel.load()?;
-    let link = skel.progs_mut().xdp_pass().attach_xdp(opts.ifindex)?;
+    let link = skel.progs.xdp_pass.attach_xdp(opts.ifindex)?;
     skel.links = XdppassLinks {
         xdp_pass: Some(link),
     };

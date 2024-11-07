@@ -1,5 +1,6 @@
 use std::io;
 use std::mem;
+use std::mem::MaybeUninit;
 use std::time::Duration;
 
 use blazesym::symbolize;
@@ -71,7 +72,7 @@ fn init_perf_monitor(freq: u64) -> Result<Vec<i32>, libbpf_rs::Error> {
 
 fn attach_perf_event(
     pefds: &[i32],
-    prog: &mut libbpf_rs::Program,
+    prog: &libbpf_rs::ProgramMut,
 ) -> Vec<Result<libbpf_rs::Link, libbpf_rs::Error>> {
     pefds
         .iter()
@@ -246,16 +247,16 @@ fn main() -> Result<(), libbpf_rs::Error> {
     let symbolizer = symbolize::Symbolizer::new();
 
     let skel_builder = ProfileSkelBuilder::default();
-    let open_skel = skel_builder.open().unwrap();
-    let mut skel = open_skel.load().unwrap();
+    let mut open_object = MaybeUninit::uninit();
+    let open_skel = skel_builder.open(&mut open_object).unwrap();
+    let skel = open_skel.load().unwrap();
 
     let pefds = init_perf_monitor(freq)?;
-    let _links = attach_perf_event(&pefds, skel.progs_mut().profile());
+    let _links = attach_perf_event(&pefds, &skel.progs.profile);
 
-    let maps = skel.maps();
     let mut builder = libbpf_rs::RingBufferBuilder::new();
     builder
-        .add(maps.events(), move |data| event_handler(&symbolizer, data))
+        .add(&skel.maps.events, move |data| event_handler(&symbolizer, data))
         .unwrap();
     let ringbuf = builder.build().unwrap();
     while ringbuf.poll(Duration::MAX).is_ok() {}

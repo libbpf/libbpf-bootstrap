@@ -4,15 +4,16 @@ version = "0.1.0"
 authors = ["Kuifeng Lee <kuifeng@fb.com>"]
 license = "GPL-2.0 OR BSD-3-Clause"
 edition = "2021"
+rust-version = "1.71"
 
 [dependencies]
 blazesym = { path = "../../../blazesym", features = ["tracing"] }
 clap = { version = "4.0", features = ["derive"] }
-libbpf-rs = "0.22"
+libbpf-rs = "0.24"
 libc = "*"
 nix = "0.24.1"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["ansi", "env-filter", "fmt"]}
 
 [build-dependencies]
-libbpf-cargo = "0.22"
+libbpf-cargo = "0.24"
