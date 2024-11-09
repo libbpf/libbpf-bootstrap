@@ -111,7 +111,7 @@ TIME     EVENT COMM             PID     PPID    FILENAME/EXIT CODE
 ## uprobe
 
 `uprobe` is an example of dealing with user-space entry and exit (return) probes,
-`uprobe` and `uretprobe` in libbpf lingo. It attached `uprobe` and `uretprobe`
+`uprobe` and `uretprobe`, in libbpf lingo. It attached `uprobe` and `uretprobe`
 BPF programs to its own functions (`uprobed_add()` and `uprobed_sub()`) and logs input arguments
 and return result, respectively, using `bpf_printk()` macro. The user-space
 function is triggered once every second:
@@ -197,7 +197,7 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
 ## kprobe
 
 `kprobe` is an example of dealing with kernel-space entry and exit (return)
-probes, `kprobe` and `kretprobe` in libbpf lingo. It attaches `kprobe` and
+probes, `kprobe` and `kretprobe`, in libbpf lingo. It attaches `kprobe` and
 `kretprobe` BPF programs to the `do_unlinkat()` function and logs the PID,
 filename, and return result, respectively, using `bpf_printk()` macro.
 
