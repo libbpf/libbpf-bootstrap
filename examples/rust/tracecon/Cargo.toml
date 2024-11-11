@@ -15,4 +15,4 @@ object = "0.25"
 plain = "0.2"
 
 [build-dependencies]
-libbpf-cargo = "0.13"
+libbpf-cargo = "0.22"
