@@ -10,7 +10,7 @@ blazesym = { path = "../../../blazesym", features = ["tracing"] }
 clap = { version = "4.0", features = ["derive"] }
 libbpf-rs = "0.22"
 libc = "*"
-nix = "0.24.1"
+nix = "0.28.0"
 tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["ansi", "env-filter", "fmt"]}
 
