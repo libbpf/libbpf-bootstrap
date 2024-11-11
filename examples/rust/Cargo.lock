@@ -622,7 +622,7 @@ dependencies = [
  "libbpf-cargo",
  "libbpf-rs",
  "libc",
- "nix 0.24.3",
+ "nix 0.28.0",
  "tracing",
  "tracing-subscriber",
 ]
