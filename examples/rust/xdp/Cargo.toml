@@ -9,7 +9,7 @@ rust-version = "1.71"
 
 [dependencies]
 anyhow = "1.0"
-ctrlc = { version = "3.0", features = ["termination"] }
+ctrlc = { version = "3.4", features = ["termination"] }
 libc = "0.2"
 libbpf-rs = "0.24"
 structopt = "0.3"
