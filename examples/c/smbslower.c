@@ -199,8 +199,8 @@ static void print_headers()
 	else
 		printf("Hit Ctrl-C to end.\n");
 
-	printf("%-8s %-14s %-7s %-25s %-17s %-16s %5s %5s %5s\n", "ENDTIME", "TASK", "PID", "TYPE",
-	       "LATENCY(ms)", "SESSIONID", "COMPOUND_RQST", "ASYNC_RQST", "TREE_ID/ASYNC_ID");
+	printf("%-8s %-14s %-7s %-25s %-12s %-17s %-16s %5s %5s %5s\n", "ENDTIME", "TASK", "PID", "TYPE",
+	       "MID", "LATENCY(ms)", "SESSIONID", "COMPOUND_RQST", "ASYNC_RQST", "TREE_ID/ASYNC_ID");
 }
 
 static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
@@ -220,8 +220,8 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 
 	if (csv) {
 		//reverse map the command
-		printf("%lld,%s,%d,%s,%lld,%llx,%d,%d,%lld\n,", e.when_release_us, e.task, e.pid,
-		       get_smb_command(e.smbcommand), e.delta_us, e.session_id, e.is_compounded,
+		printf("%lld,%s,%d,%s,%lld,%lld,%llx,%d,%d,%lld\n,", e.when_release_us, e.task, e.pid,
+		       get_smb_command(e.smbcommand), e.mid, e.delta_us, e.session_id, e.is_compounded,
 		       e.is_async, e.id);
 		return;
 	}
@@ -230,8 +230,8 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 	tm = localtime(&t);
 	strftime(ts, sizeof(ts), "%H:%M:%S", tm);
 
-	printf("%-8s %-14s %-7d %-25s %-16.3f %-16llx %12d %12d %12lld\n", ts, e.task, e.pid,
-	       get_smb_command(e.smbcommand), (double)e.delta_us / 1000, e.session_id,
+	printf("%-8s %-14s %-7d %-25s %-12lld %-16.3f %-16llx %12d %12d %12lld\n", ts, e.task, e.pid,
+	       get_smb_command(e.smbcommand), e.mid, (double)e.delta_us / 1000, e.session_id,
 	       e.is_compounded, e.is_async, e.id);
 }
 
