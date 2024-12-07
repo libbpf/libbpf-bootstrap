@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <getopt.h> 
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
@@ -133,13 +134,17 @@ static int event_handler(void *_ctx, void *data, size_t size)
 
 static void show_help(const char *progname)
 {
-	printf("Usage: %s [-f <frequency>] [-h]\n", progname);
+	printf("Usage: %s [-f <frequency>] [--sw-event] [-h]\n", progname);
+	printf("Options:\n");
+	printf("  -f <frequency>  Sampling frequency [default: 1]\n");
+	printf("  --sw-event      Use software event for triggering stack trace capture\n");
+	printf("  -h              Print help\n");
 }
 
 int main(int argc, char *const argv[])
 {
 	const char *online_cpus_file = "/sys/devices/system/cpu/online";
-	int freq = 1, pid = -1, cpu;
+	int freq = 1, sw_event = 0, pid = -1, cpu;
 	struct profile_bpf *skel = NULL;
 	struct perf_event_attr attr;
 	struct bpf_link **links = NULL;
@@ -149,12 +154,20 @@ int main(int argc, char *const argv[])
 	int argp, i, err = 0;
 	bool *online_mask = NULL;
 
-	while ((argp = getopt(argc, argv, "hf:")) != -1) {
+	static struct option long_options[] = {
+		{"sw-event", no_argument, 0, 's'},
+		{0, 0, 0, 0}
+	};
+
+	while ((argp = getopt_long(argc, argv, "hf:", long_options, NULL)) != -1) {
 		switch (argp) {
 		case 'f':
 			freq = atoi(optarg);
 			if (freq < 1)
 				freq = 1;
+			break;
+		case 's':
+			sw_event = 1;
 			break;
 
 		case 'h':
@@ -206,9 +219,9 @@ int main(int argc, char *const argv[])
 	links = calloc(num_cpus, sizeof(struct bpf_link *));
 
 	memset(&attr, 0, sizeof(attr));
-	attr.type = PERF_TYPE_HARDWARE;
+	attr.type = sw_event ? PERF_TYPE_SOFTWARE : PERF_TYPE_HARDWARE;
 	attr.size = sizeof(attr);
-	attr.config = PERF_COUNT_HW_CPU_CYCLES;
+	attr.config = sw_event ? PERF_COUNT_SW_CPU_CLOCK : PERF_COUNT_HW_CPU_CYCLES;
 	attr.sample_freq = freq;
 	attr.freq = 1;
 
@@ -220,7 +233,13 @@ int main(int argc, char *const argv[])
 		/* Set up performance monitoring on a CPU/Core */
 		pefd = perf_event_open(&attr, pid, cpu, -1, PERF_FLAG_FD_CLOEXEC);
 		if (pefd < 0) {
-			fprintf(stderr, "Fail to set up performance monitor on a CPU/Core\n");
+			if (!sw_event && errno == ENOENT) {
+				fprintf(stderr,
+					"Fail to set up performance monitor on a CPU/Core.\n"
+					"Try running the profile example with the `--sw-event` option.\n");
+			} else {
+				fprintf(stderr, "Fail to set up performance monitor on a CPU/Core.\n");
+			}
 			err = -1;
 			goto cleanup;
 		}
