@@ -54,7 +54,9 @@ pub struct perf_event_attr {
 }
 
 pub const PERF_TYPE_HARDWARE: u32 = 0;
+pub const PERF_TYPE_SOFTWARE: u32 = 1;
 pub const PERF_COUNT_HW_CPU_CYCLES: u64 = 0;
+pub const PERF_COUNT_SW_CPU_CLOCK: u64 = 0;
 
 extern "C" {
     fn syscall(number: libc::c_long, ...) -> libc::c_long;
