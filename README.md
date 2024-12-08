@@ -111,7 +111,7 @@ TIME     EVENT COMM             PID     PPID    FILENAME/EXIT CODE
 ## uprobe
 
 `uprobe` is an example of dealing with user-space entry and exit (return) probes,
-`uprobe` and `uretprobe`, in libbpf lingo. It attached `uprobe` and `uretprobe`
+`uprobe` and `uretprobe`, in libbpf lingo. It attaches `uprobe` and `uretprobe`
 BPF programs to its own functions (`uprobed_add()` and `uprobed_sub()`) and logs input arguments
 and return result, respectively, using `bpf_printk()` macro. The user-space
 function is triggered once every second:
