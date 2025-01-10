@@ -6,5 +6,7 @@ updates:
   - package-ecosystem: cargo
     versioning-strategy: auto
     directory: examples/rust/
+    allow:
+      - dependency-name: libbpf-rs
     schedule:
       interval: daily
