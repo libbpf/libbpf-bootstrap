@@ -37,31 +37,31 @@ static struct blaze_symbolizer *symbolizer;
 
 static void print_frame(const char *name, uintptr_t input_addr, uintptr_t addr, uint64_t offset, const blaze_symbolize_code_info* code_info)
 {
-    // If we have an input address  we have a new symbol.
-    if (input_addr != 0) {
-      printf("%016lx: %s @ 0x%lx+0x%lx", input_addr, name, addr, offset);
-			if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
-				printf(" %s/%s:%u\n", code_info->dir, code_info->file, code_info->line);
-      } else if (code_info != NULL && code_info->file != NULL) {
-				printf(" %s:%u\n", code_info->file, code_info->line);
-      } else {
-				printf("\n");
-      }
-    } else {
-      printf("%16s  %s", "", name);
-			if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
-				printf("@ %s/%s:%u [inlined]\n", code_info->dir, code_info->file, code_info->line);
-      } else if (code_info != NULL && code_info->file != NULL) {
-				printf("@ %s:%u [inlined]\n", code_info->file, code_info->line);
-      } else {
-				printf("[inlined]\n");
-      }
-    }
+	/* If we have an input address  we have a new symbol. */
+	if (input_addr != 0) {
+		printf("%016lx: %s @ 0x%lx+0x%lx", input_addr, name, addr, offset);
+		if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
+			printf(" %s/%s:%u\n", code_info->dir, code_info->file, code_info->line);
+		} else if (code_info != NULL && code_info->file != NULL) {
+			printf(" %s:%u\n", code_info->file, code_info->line);
+		} else {
+			printf("\n");
+		}
+	} else {
+		printf("%16s  %s", "", name);
+		if (code_info != NULL && code_info->dir != NULL && code_info->file != NULL) {
+			printf("@ %s/%s:%u [inlined]\n", code_info->dir, code_info->file, code_info->line);
+		} else if (code_info != NULL && code_info->file != NULL) {
+			printf("@ %s:%u [inlined]\n", code_info->file, code_info->line);
+		} else {
+			printf("[inlined]\n");
+		}
+	}
 }
 
 static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 {
-  const struct blaze_symbolize_inlined_fn* inlined;
+	const struct blaze_symbolize_inlined_fn* inlined;
 	const struct blaze_syms *syms;
 	const struct blaze_sym *sym;
 	int i, j;
@@ -73,15 +73,17 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 			.type_size = sizeof(src),
 			.pid = pid,
 		};
+
 		syms = blaze_symbolize_process_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	} else {
 		struct blaze_symbolize_src_kernel src = {
 			.type_size = sizeof(src),
 		};
+
 		syms = blaze_symbolize_kernel_abs_addrs(symbolizer, &src, (const uintptr_t *)stack, stack_sz);
 	}
 
-	if (syms == NULL) {
+	if (!syms) {
 		printf("  failed to symbolize addresses: %s\n", blaze_err_str(blaze_err_last()));
 		return;
 	}
@@ -92,13 +94,13 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 			continue;
 		}
 
-    sym = &syms->syms[i];
-    print_frame(sym->name, stack[i], sym->addr, sym->offset, &sym->code_info);
+		sym = &syms->syms[i];
+		print_frame(sym->name, stack[i], sym->addr, sym->offset, &sym->code_info);
 
-    for (j = 0; j < sym->inlined_cnt; j++) {
-      inlined = &sym->inlined[j];
-      print_frame(sym->name, 0, 0, 0, &inlined->code_info);
-    }
+		for (j = 0; j < sym->inlined_cnt; j++) {
+			inlined = &sym->inlined[j];
+			print_frame(sym->name, 0, 0, 0, &inlined->code_info);
+		}
 	}
 
 	blaze_syms_free(syms);
