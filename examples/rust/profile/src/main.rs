@@ -146,9 +146,9 @@ fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32)
     };
 
     let src = if pid == 0 {
-        symbolize::Source::from(symbolize::Kernel::default())
+        symbolize::source::Source::from(symbolize::source::Kernel::default())
     } else {
-        symbolize::Source::from(symbolize::Process::new(pid.into()))
+        symbolize::source::Source::from(symbolize::source::Process::new(pid.into()))
     };
 
     let syms = match symbolizer.symbolize(&src, symbolize::Input::AbsAddr(stack)) {
