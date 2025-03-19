@@ -1,3 +1,5 @@
+use std::mem;
+
 extern crate libc;
 
 #[repr(C)]
@@ -51,6 +53,12 @@ pub struct perf_event_attr {
     pub __reserved_2: u16,
     pub aux_sample_size: u32,
     pub __reserved_3: u32,
+}
+
+impl Default for perf_event_attr {
+    fn default() -> Self {
+        unsafe { mem::zeroed() }
+    }
 }
 
 pub const PERF_TYPE_HARDWARE: u32 = 0;
