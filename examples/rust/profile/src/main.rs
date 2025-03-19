@@ -46,28 +46,25 @@ struct stacktrace_event {
 fn init_perf_monitor(freq: u64, sw_event: bool) -> Result<Vec<i32>, libbpf_rs::Error> {
     let nprocs = libbpf_rs::num_possible_cpus().unwrap();
     let pid = -1;
-    let buf: Vec<u8> = vec![0; mem::size_of::<syscall::perf_event_attr>()];
-    let mut attr = unsafe {
-        Box::<syscall::perf_event_attr>::from_raw(
-            buf.leak().as_mut_ptr() as *mut syscall::perf_event_attr
-        )
+    let attr = syscall::perf_event_attr {
+        _type: if sw_event {
+            syscall::PERF_TYPE_SOFTWARE
+        } else {
+            syscall::PERF_TYPE_HARDWARE
+        },
+        size: mem::size_of::<syscall::perf_event_attr>() as u32,
+        config: if sw_event {
+            syscall::PERF_COUNT_SW_CPU_CLOCK
+        } else {
+            syscall::PERF_COUNT_HW_CPU_CYCLES
+        },
+        sample: syscall::sample_un { sample_freq: freq },
+        flags: 1 << 10, // freq = 1
+        ..Default::default()
     };
-    attr._type = if sw_event {
-        syscall::PERF_TYPE_SOFTWARE
-    } else {
-        syscall::PERF_TYPE_HARDWARE
-    };
-    attr.size = mem::size_of::<syscall::perf_event_attr>() as u32;
-    attr.config = if sw_event {
-        syscall::PERF_COUNT_SW_CPU_CLOCK
-    } else {
-        syscall::PERF_COUNT_HW_CPU_CYCLES
-    };
-    attr.sample.sample_freq = freq;
-    attr.flags = 1 << 10; // freq = 1
     (0..nprocs)
         .map(|cpu| {
-            let fd = syscall::perf_event_open(attr.as_ref(), pid, cpu as i32, -1, 0) as i32;
+            let fd = syscall::perf_event_open(&attr, pid, cpu as i32, -1, 0) as i32;
             if fd == -1 {
                 let mut error_context = "Failed to open perf event.";
                 let os_error = io::Error::last_os_error();
@@ -275,7 +272,9 @@ fn main() -> Result<(), libbpf_rs::Error> {
 
     let mut builder = libbpf_rs::RingBufferBuilder::new();
     builder
-        .add(&skel.maps.events, move |data| event_handler(&symbolizer, data))
+        .add(&skel.maps.events, move |data| {
+            event_handler(&symbolizer, data)
+        })
         .unwrap();
     let ringbuf = builder.build().unwrap();
     while ringbuf.poll(Duration::MAX).is_ok() {}
