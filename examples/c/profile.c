@@ -99,7 +99,7 @@ static void show_stack_trace(__u64 *stack, int stack_sz, pid_t pid)
 
 		for (j = 0; j < sym->inlined_cnt; j++) {
 			inlined = &sym->inlined[j];
-			print_frame(sym->name, 0, 0, 0, &inlined->code_info);
+			print_frame(inlined->name, 0, 0, 0, &inlined->code_info);
 		}
 	}
 
