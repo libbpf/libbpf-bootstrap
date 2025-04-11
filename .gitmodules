@@ -1,3 +1,12 @@
 [submodule "libbpf"]
 	path = libbpf
 	url = https://github.com/libbpf/libbpf.git
+[submodule "bpftool"]
+	path = bpftool
+	url = https://github.com/libbpf/bpftool
+[submodule "blazesym"]
+	path = blazesym
+	url = https://github.com/libbpf/blazesym.git
+[submodule "vmlinux.h"]
+	path = vmlinux.h
+	url = https://github.com/libbpf/vmlinux.h.git

@@ -1,0 +1,33 @@
+name: libbpf-bootstrap android build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  schedule:
+    - cron: '7 17 * * *'
+
+jobs:
+  build_libbpf_bootstrap_android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [armeabi-v7a, arm64-v8a, x86_64]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    - uses: xmake-io/github-action-setup-xmake@v1
+      with:
+        xmake-version: branch@master
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update -y && sudo apt-get install -yqq \
+          build-essential clang llvm zlib1g-dev libc++-dev libc++abi-dev \
+          sudo \
+          && sudo apt-get -y clean
+    - name: Build xmake android examples/c
+      run: |
+        cd examples/c && xmake f -p android -a ${{ matrix.arch }} --require-bpftool=y -y && xmake -y

@@ -1,0 +1,12 @@
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: cargo
+    versioning-strategy: auto
+    directory: examples/rust/
+    allow:
+      - dependency-name: libbpf-rs
+    schedule:
+      interval: daily

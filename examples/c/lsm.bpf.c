@@ -47,4 +47,5 @@ int BPF_PROG(executable_block, struct linux_binprm *bprm, int ret) {
     return -EPERM;
 
   return ret;
+
 }

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: (LGPL-2.1 OR BSD-2-Clause)
 /* Copyright (c) 2020 Facebook */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/resource.h>
 #include <bpf/libbpf.h>
 #include <stdlib.h>
 #include "lsm.skel.h"
+
 
 static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va_list args)
 {
@@ -24,6 +26,7 @@ static void bump_memlock_rlimit(void)
 		exit(1);
 	}
 }
+
 
 int main(int argc, char **argv)
 {
@@ -57,6 +60,15 @@ int main(int argc, char **argv)
 	}
 
 	/* Attach tracepoint handler */
+=======
+	/* Open, load, and verify BPF application */
+	skel = lsm_bpf__open_and_load();
+	if (!skel) {
+		fprintf(stderr, "Failed to open and load BPF skeleton\n");
+		goto cleanup;
+	}
+
+	/* Attach lsm handler */
 	err = lsm_bpf__attach(skel);
 	if (err) {
 		fprintf(stderr, "Failed to attach BPF skeleton\n");
@@ -64,6 +76,7 @@ int main(int argc, char **argv)
 	}
 
 	printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` ");
+
 
 	for (;;) {
 		/* trigger our BPF program */

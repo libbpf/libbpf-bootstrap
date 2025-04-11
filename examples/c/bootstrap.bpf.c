@@ -62,13 +62,13 @@ int handle_exec(struct trace_event_raw_sched_process_exec *ctx)
 }
 
 SEC("tp/sched/sched_process_exit")
-int handle_exit(struct trace_event_raw_sched_process_template* ctx)
+int handle_exit(struct trace_event_raw_sched_process_template *ctx)
 {
 	struct task_struct *task;
 	struct event *e;
 	pid_t pid, tid;
 	u64 id, ts, *start_ts, duration_ns = 0;
-	
+
 	/* get PID and TID of exiting thread/process */
 	id = bpf_get_current_pid_tgid();
 	pid = id >> 32;
@@ -109,4 +109,3 @@ int handle_exit(struct trace_event_raw_sched_process_template* ctx)
 	bpf_ringbuf_submit(e, 0);
 	return 0;
 }
-

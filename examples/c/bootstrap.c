@@ -16,13 +16,12 @@ static struct env {
 
 const char *argp_program_version = "bootstrap 0.0";
 const char *argp_program_bug_address = "<bpf@vger.kernel.org>";
-const char argp_program_doc[] =
-"BPF bootstrap demo application.\n"
-"\n"
-"It traces process start and exits and shows associated \n"
-"information (filename, process duration, PID and PPID, etc).\n"
-"\n"
-"USAGE: ./bootstrap [-d <min-duration-ms>] [-v]\n";
+const char argp_program_doc[] = "BPF bootstrap demo application.\n"
+				"\n"
+				"It traces process start and exits and shows associated \n"
+				"information (filename, process duration, PID and PPID, etc).\n"
+				"\n"
+				"USAGE: ./bootstrap [-d <min-duration-ms>] [-v]\n";
 
 static const struct argp_option opts[] = {
 	{ "verbose", 'v', NULL, 0, "Verbose debug output" },
@@ -66,19 +65,6 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-static void bump_memlock_rlimit(void)
-{
-	struct rlimit rlim_new = {
-		.rlim_cur	= RLIM_INFINITY,
-		.rlim_max	= RLIM_INFINITY,
-	};
-
-	if (setrlimit(RLIMIT_MEMLOCK, &rlim_new)) {
-		fprintf(stderr, "Failed to increase RLIMIT_MEMLOCK limit!\n");
-		exit(1);
-	}
-}
-
 static volatile bool exiting = false;
 
 static void sig_handler(int sig)
@@ -98,14 +84,14 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	strftime(ts, sizeof(ts), "%H:%M:%S", tm);
 
 	if (e->exit_event) {
-		printf("%-8s %-5s %-16s %-7d %-7d [%u]",
-		       ts, "EXIT", e->comm, e->pid, e->ppid, e->exit_code);
+		printf("%-8s %-5s %-16s %-7d %-7d [%u]", ts, "EXIT", e->comm, e->pid, e->ppid,
+		       e->exit_code);
 		if (e->duration_ns)
 			printf(" (%llums)", e->duration_ns / 1000000);
 		printf("\n");
 	} else {
-		printf("%-8s %-5s %-16s %-7d %-7d %s\n",
-		       ts, "EXEC", e->comm, e->pid, e->ppid, e->filename);
+		printf("%-8s %-5s %-16s %-7d %-7d %s\n", ts, "EXEC", e->comm, e->pid, e->ppid,
+		       e->filename);
 	}
 
 	return 0;
@@ -124,9 +110,6 @@ int main(int argc, char **argv)
 
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
-
-	/* Bump RLIMIT_MEMLOCK to create BPF maps */
-	bump_memlock_rlimit();
 
 	/* Cleaner handling of Ctrl-C */
 	signal(SIGINT, sig_handler);
@@ -165,8 +148,8 @@ int main(int argc, char **argv)
 	}
 
 	/* Process events */
-	printf("%-8s %-5s %-16s %-7s %-7s %s\n",
-	       "TIME", "EVENT", "COMM", "PID", "PPID", "FILENAME/EXIT CODE");
+	printf("%-8s %-5s %-16s %-7s %-7s %s\n", "TIME", "EVENT", "COMM", "PID", "PPID",
+	       "FILENAME/EXIT CODE");
 	while (!exiting) {
 		err = ring_buffer__poll(rb, 100 /* timeout, ms */);
 		/* Ctrl-C will cause -EINTR */

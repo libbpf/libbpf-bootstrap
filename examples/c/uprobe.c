@@ -12,65 +12,30 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-static void bump_memlock_rlimit(void)
-{
-	struct rlimit rlim_new = {
-		.rlim_cur	= RLIM_INFINITY,
-		.rlim_max	= RLIM_INFINITY,
-	};
-
-	if (setrlimit(RLIMIT_MEMLOCK, &rlim_new)) {
-		fprintf(stderr, "Failed to increase RLIMIT_MEMLOCK limit!\n");
-		exit(1);
-	}
-}
-
-/* Find process's base load address. We use /proc/self/maps for that,
- * searching for the first executable (r-xp) memory mapping:
- *
- * 5574fd254000-5574fd258000 r-xp 00002000 fd:01 668759                     /usr/bin/cat
- * ^^^^^^^^^^^^                   ^^^^^^^^
- *
- * Subtracting that region's offset (4th column) from its absolute start
- * memory address (1st column) gives us the process's base load address.
+/* It's a global function to make sure compiler doesn't inline it. To be extra
+ * sure we also use "asm volatile" and noinline attributes to prevent
+ * compiler from local inlining.
  */
-static long get_base_addr() {
-	size_t start, offset;
-	char buf[256];
-	FILE *f;
-
-	f = fopen("/proc/self/maps", "r");
-	if (!f)
-		return -errno;
-
-	while (fscanf(f, "%zx-%*x %s %zx %*[^\n]\n", &start, buf, &offset) == 3) {
-		if (strcmp(buf, "r-xp") == 0) {
-			fclose(f);
-			return start - offset;
-		}
-	}
-
-	fclose(f);
-	return -1;
+__attribute__((noinline)) int uprobed_add(int a, int b)
+{
+	asm volatile ("");
+	return a + b;
 }
 
-/* It's a global function to make sure compiler doesn't inline it. */
-int uprobed_function(int a, int b)
+__attribute__((noinline)) int uprobed_sub(int a, int b)
 {
-	return a + b;
+	asm volatile ("");
+	return a - b;
 }
 
 int main(int argc, char **argv)
 {
 	struct uprobe_bpf *skel;
-	long base_addr, uprobe_offset;
 	int err, i;
+	LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts);
 
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
-
-	/* Bump RLIMIT_MEMLOCK to allow BPF sub-system to do anything */
-	bump_memlock_rlimit();
 
 	/* Load and verify BPF application */
 	skel = uprobe_bpf__open_and_load();
@@ -79,30 +44,20 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	base_addr = get_base_addr();
-	if (base_addr < 0) {
-		fprintf(stderr, "Failed to determine process's load address\n");
-		err = base_addr;
-		goto cleanup;
-	}
-
-	/* uprobe/uretprobe expects relative offset of the function to attach
-	 * to. This offset is relateve to the process's base load address. So
-	 * easy way to do this is to take an absolute address of the desired
-	 * function and substract base load address from it.  If we were to
-	 * parse ELF to calculate this function, we'd need to add .text
-	 * section offset and function's offset within .text ELF section.
-	 */
-	uprobe_offset = (long)&uprobed_function - base_addr;
-
 	/* Attach tracepoint handler */
-	skel->links.uprobe = bpf_program__attach_uprobe(skel->progs.uprobe,
-							false /* not uretprobe */,
-							0 /* self pid */,
-							"/proc/self/exe",
-							uprobe_offset);
-	err = libbpf_get_error(skel->links.uprobe);
-	if (err) {
+	uprobe_opts.func_name = "uprobed_add";
+	uprobe_opts.retprobe = false;
+	/* uprobe/uretprobe expects relative offset of the function to attach
+	 * to. libbpf will automatically find the offset for us if we provide the
+	 * function name. If the function name is not specified, libbpf will try
+	 * to use the function offset instead.
+	 */
+	skel->links.uprobe_add = bpf_program__attach_uprobe_opts(skel->progs.uprobe_add,
+								 0 /* self pid */, "/proc/self/exe",
+								 0 /* offset for function */,
+								 &uprobe_opts /* opts */);
+	if (!skel->links.uprobe_add) {
+		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
 		goto cleanup;
 	}
@@ -111,24 +66,34 @@ int main(int argc, char **argv)
 	 * processes that use the same binary executable; to do that we need
 	 * to specify -1 as PID, as we do here
 	 */
-	skel->links.uretprobe = bpf_program__attach_uprobe(skel->progs.uretprobe,
-							   true /* uretprobe */,
-							   -1 /* any pid */,
-							   "/proc/self/exe",
-							   uprobe_offset);
-	err = libbpf_get_error(skel->links.uretprobe);
-	if (err) {
+	uprobe_opts.func_name = "uprobed_add";
+	uprobe_opts.retprobe = true;
+	skel->links.uretprobe_add = bpf_program__attach_uprobe_opts(
+		skel->progs.uretprobe_add, -1 /* self pid */, "/proc/self/exe",
+		0 /* offset for function */, &uprobe_opts /* opts */);
+	if (!skel->links.uretprobe_add) {
+		err = -errno;
 		fprintf(stderr, "Failed to attach uprobe: %d\n", err);
+		goto cleanup;
+	}
+
+	/* Let libbpf perform auto-attach for uprobe_sub/uretprobe_sub
+	 * NOTICE: we provide path and symbol info in SEC for BPF programs
+	 */
+	err = uprobe_bpf__attach(skel);
+	if (err) {
+		fprintf(stderr, "Failed to auto-attach BPF skeleton: %d\n", err);
 		goto cleanup;
 	}
 
 	printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` "
 	       "to see output of the BPF programs.\n");
 
-	for (i = 0; ; i++) {
+	for (i = 0;; i++) {
 		/* trigger our BPF programs */
 		fprintf(stderr, ".");
-		uprobed_function(i, i + 1);
+		uprobed_add(i, i + 1);
+		uprobed_sub(i * i, i);
 		sleep(1);
 	}
 

@@ -16,19 +16,6 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-static void bump_memlock_rlimit(void)
-{
-	struct rlimit rlim_new = {
-		.rlim_cur	= RLIM_INFINITY,
-		.rlim_max	= RLIM_INFINITY,
-	};
-
-	if (setrlimit(RLIMIT_MEMLOCK, &rlim_new)) {
-		fprintf(stderr, "Failed to increase RLIMIT_MEMLOCK limit!\n");
-		exit(1);
-	}
-}
-
 static volatile sig_atomic_t stop;
 
 void sig_int(int signo)
@@ -43,9 +30,6 @@ int main(int argc, char **argv)
 
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
-
-	/* Bump RLIMIT_MEMLOCK to allow BPF sub-system to do anything */
-	bump_memlock_rlimit();
 
 	/* Open load and verify BPF application */
 	skel = fentry_bpf__open_and_load();
