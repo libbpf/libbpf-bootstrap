@@ -105,15 +105,12 @@ elseif(BPFOBJECT_BPFTOOL_EXE)
   # Generate vmlinux.h
   set(GENERATED_VMLINUX_DIR ${CMAKE_CURRENT_BINARY_DIR})
   set(BPFOBJECT_VMLINUX_H ${GENERATED_VMLINUX_DIR}/vmlinux.h)
-  execute_process(COMMAND ${BPFOBJECT_BPFTOOL_EXE} btf dump file /sys/kernel/btf/vmlinux format c
-    OUTPUT_FILE ${BPFOBJECT_VMLINUX_H}
-    ERROR_VARIABLE VMLINUX_error
-    RESULT_VARIABLE VMLINUX_result)
-  if(${VMLINUX_result} EQUAL 0)
-    set(VMLINUX ${BPFOBJECT_VMLINUX_H})
-  else()
-    message(FATAL_ERROR "Failed to dump vmlinux.h from BTF: ${VMLINUX_error}")
-  endif()
+  add_custom_command(OUTPUT ${BPFOBJECT_VMLINUX_H}
+    COMMAND ${BPFOBJECT_BPFTOOL_EXE} btf dump file /sys/kernel/btf/vmlinux format c > ${BPFOBJECT_VMLINUX_H}
+    DEPENDS ${BPFOBJECT_BPFTOOL_EXE}
+    VERBATIM
+    COMMENT "[vmlinux] Generating header: ${BPFOBJECT_VMLINUX_H}"
+  )
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -123,6 +120,7 @@ find_package_handle_standard_args(BpfObject
     BPFOBJECT_CLANG_EXE
     LIBBPF_INCLUDE_DIRS
     LIBBPF_LIBRARIES
+    BPFOBJECT_VMLINUX_H
     GENERATED_VMLINUX_DIR)
 
 # Get clang bpf system includes
@@ -171,7 +169,7 @@ macro(bpf_object name input)
             -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
     COMMAND_EXPAND_LISTS
     VERBATIM
-    DEPENDS ${BPF_C_FILE} ${BPF_H_FILES}
+    DEPENDS ${BPF_C_FILE} ${BPF_H_FILES} ${BPFOBJECT_VMLINUX_H}
     COMMENT "[clang] Building BPF object: ${name}")
 
   # Build BPF skeleton header
