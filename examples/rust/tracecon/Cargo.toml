@@ -7,7 +7,7 @@ license = "GPL-2.0 OR BSD-3-Clause"
 
 [dependencies]
 anyhow = "1.0"
-libbpf-rs = "0.24"
+libbpf-rs = "0.25"
 libc = "0.2"
 structopt = "0.3"
 ctrlc = "3.4"

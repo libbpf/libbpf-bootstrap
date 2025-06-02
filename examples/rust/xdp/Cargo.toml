@@ -10,7 +10,7 @@ edition = "2021"
 anyhow = "1.0"
 ctrlc = { version = "3.4", features = ["termination"] }
 libc = "0.2"
-libbpf-rs = "0.24"
+libbpf-rs = "0.25"
 structopt = "0.3"
 
 [build-dependencies]
