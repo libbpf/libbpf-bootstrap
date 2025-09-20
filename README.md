@@ -312,7 +312,8 @@ interface:lo    protocol: UDP   127.0.0.1:41552(src) -> 127.0.0.1:53(dst)
 
 `task_iter` is an example of using [BPF Iterators](https://docs.kernel.org/bpf/bpf_iterators.html). 
 This example iterates over all tasks on the host and gets their pid, process name, 
-kernel stack, and their state. Note: you can use BlazeSym to symbolize the kernel stacktraces 
+kernel stack, and their state. The user can provide a pid as first argument to the executable. This will filter out all
+tasks not belonging to a particular process. Note: you can use BlazeSym to symbolize the kernel stacktraces
 (like in `profile`) but that code is omitted for simplicity.
 
 ```shell

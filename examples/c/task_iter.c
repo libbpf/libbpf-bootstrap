@@ -3,6 +3,7 @@
 #include <argp.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/resource.h>
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
@@ -53,6 +54,22 @@ int main(int argc, char **argv)
 	int iter_fd;
 	ssize_t ret;
 	int err;
+	LIBBPF_OPTS(bpf_iter_attach_opts, opts);
+	union bpf_iter_link_info linfo;
+	pid_t pid_filter = 0;
+
+	/* The user can provide a process id as first argument to the executable. This can be used
+	 * to filter out all tasks not belonging to a particular process.
+	 */
+	if (argc > 1) {
+		errno = 0;
+		pid_filter = (pid_t)strtol(argv[1], NULL, 10);
+		err = -errno;
+		if (err != 0 || pid_filter < 0) {
+			fprintf(stderr, "Failed to parse pid '%s'\n", argv[1]);
+			return err;
+		}
+	}
 
 	/* Set up libbpf errors and debug info callback */
 	libbpf_set_print(libbpf_print_fn);
@@ -68,12 +85,25 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	/* Attach tracepoints */
-	err = task_iter_bpf__attach(skel);
-	if (err) {
+	/* Attach BPF iterator program */
+	memset(&linfo, 0, sizeof(linfo));
+	linfo.task.pid = pid_filter; /* If the pid is set to zero, no filtering logic is applied */
+	opts.link_info = &linfo;
+	opts.link_info_len = sizeof(linfo);
+	skel->links.get_tasks = bpf_program__attach_iter(skel->progs.get_tasks, &opts);
+	if (!skel->links.get_tasks) {
+		err = -errno;
 		fprintf(stderr, "Failed to attach BPF skeleton\n");
 		goto cleanup;
 	}
+	/* Alternatively, if the user doesn't want to provide any option, the following simplified
+	 * version can be used:
+	 * err = task_iter_bpf__attach(skel);
+	 * if (err) {
+	 *	fprintf(stderr, "Failed to attach BPF skeleton\n");
+	 *	goto cleanup;
+	 * }
+	 */
 
 	iter_fd = bpf_iter_create(bpf_link__fd(skel->links.get_tasks));
 	if (iter_fd < 0) {
