@@ -93,9 +93,9 @@ fn attach_perf_event(
 fn print_frame(
     name: &str,
     addr_info: Option<(blazesym::Addr, blazesym::Addr, usize)>,
-    code_info: &Option<symbolize::CodeInfo>,
+    code_info: Option<&symbolize::CodeInfo>,
 ) {
-    let code_info = code_info.as_ref().map(|code_info| {
+    let code_info = code_info.map(|code_info| {
         let path = code_info.to_path();
         let path = path.display();
 
@@ -169,9 +169,9 @@ fn show_stack_trace(stack: &[u64], symbolizer: &symbolize::Symbolizer, pid: u32)
                 inlined,
                 ..
             }) => {
-                print_frame(&name, Some((input_addr, addr, offset)), &code_info);
+                print_frame(&name, Some((input_addr, addr, offset)), code_info.as_deref());
                 for frame in inlined.iter() {
-                    print_frame(&frame.name, None, &frame.code_info);
+                    print_frame(&frame.name, None, frame.code_info.as_ref());
                 }
             }
             symbolize::Symbolized::Unknown(..) => {
