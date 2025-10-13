@@ -108,6 +108,22 @@ TIME     EVENT COMM             PID     PPID    FILENAME/EXIT CODE
 ...
 ```
 
+## bootstrap_legacy
+
+`bootstrap_legacy` is a version of `bootstrap` modified to run on older kernels that do not support BPF ring buffer maps (BPF_MAP_TYPE_RINGBUF) introduced in kernel 5.8. `bootstrap_legacy` replaces the ring buffer maps with perf event array (BPF_MAP_TYPE_PERF_EVENT_ARRAY) for compatibility with older kernel versions.
+
+```shell
+$ cd examples/c
+$ make bootstrap_legacy
+$ sudo ./bootstrap_legacy
+TIME     EVENT COMM             PID     PPID    FILENAME/EXIT CODE
+10:26:32 EXEC  sh               4101543 4054526 /bin/sh
+10:26:32 EXEC  python           4101545 4101543 /usr/bin/python
+10:26:32 EXIT  python           4101545 4101543 [0] (9ms)
+10:26:32 EXIT  sh               4101543 4054526 [0] (10ms)
+...
+```
+
 ## uprobe
 
 `uprobe` is an example of dealing with user-space entry and exit (return) probes,
