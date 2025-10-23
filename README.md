@@ -3,6 +3,9 @@
 [![Github Actions](https://github.com/libbpf/libbpf-bootstrap/actions/workflows/build.yml/badge.svg)](https://github.com/libbpf/libbpf-bootstrap/actions/workflows/build.yml)
 [![Github Actions](https://github.com/libbpf/libbpf-bootstrap/actions/workflows/build-android.yml/badge.svg)](https://github.com/libbpf/libbpf-bootstrap/actions/workflows/build-android.yml)
 
+Make sure you have cloned this repo using `--recurse-submodules` and installed the dependencies 
+before you try to build the examples.  See [Building](#Building) for details.
+
 ## minimal
 
 `minimal` is just that – a minimal practical BPF application example. It
