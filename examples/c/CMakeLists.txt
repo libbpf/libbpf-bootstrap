@@ -13,6 +13,7 @@ ExternalProject_Add(libbpf
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../libbpf/src
   CONFIGURE_COMMAND ""
   BUILD_COMMAND make
+    CC=${CMAKE_C_COMPILER}
     BUILD_STATIC_ONLY=1
     OBJDIR=${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf
     DESTDIR=${CMAKE_CURRENT_BINARY_DIR}/libbpf
@@ -38,15 +39,53 @@ ExternalProject_Add(bpftool
 
 find_program(CARGO_EXISTS cargo)
 if(CARGO_EXISTS)
-  ExternalProject_Add(blazesym
-    PREFIX blazesym
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND cargo build --package=blazesym-c --release
-    BUILD_IN_SOURCE TRUE
-    INSTALL_COMMAND ""
-    STEP_TARGETS build
-  )
+  if(CMAKE_CROSSCOMPILING)
+    # Determine target triple
+    if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+      if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+          set(CARGO_TARGET "x86_64-unknown-linux-gnu")
+      elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+          set(CARGO_TARGET "aarch64-unknown-linux-gnu")
+      else()
+          message(FATAL_ERROR "Unsupported processor for Linux: ${CMAKE_SYSTEM_PROCESSOR}")
+      endif()
+
+      if(CMAKE_CXX_COMPILER)
+        set(RUST_LINKER ${CMAKE_CXX_COMPILER})
+      else()
+        set(RUST_LINKER ${CMAKE_C_COMPILER})
+      endif()
+    else()
+      message((FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}"))
+    endif()
+
+    set(LIBBLAZESYM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/${CARGO_TARGET}/release/libblazesym_c.a)
+
+    ExternalProject_Add(blazesym
+      PREFIX blazesym
+      SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND ${CMAKE_COMMAND} -E env
+        RUSTFLAGS=-C\ linker=${RUST_LINKER}
+        cargo build --package=blazesym-c --release --target=${CARGO_TARGET}
+      BUILD_IN_SOURCE TRUE
+      INSTALL_COMMAND ""
+      STEP_TARGETS build
+    )
+  else() # Host
+    set(LIBBLAZESYM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym_c.a)
+
+    ExternalProject_Add(blazesym
+      PREFIX blazesym
+      SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND
+        cargo build --package=blazesym-c --release
+      BUILD_IN_SOURCE TRUE
+      INSTALL_COMMAND ""
+      STEP_TARGETS build
+    )
+  endif()
 endif()
 
 # Set BpfObject input parameters -- note this is usually not necessary unless
@@ -91,6 +130,7 @@ foreach(app ${apps})
     target_include_directories(${app_stem} PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/capi/include)
     target_link_libraries(${app_stem}
-      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym_c.a -lpthread -lrt -ldl)
+      ${LIBBLAZESYM_PATH} -lpthread -lrt -ldl)
+    add_dependencies(${app_stem} blazesym-build)
   endif()
 endforeach()
