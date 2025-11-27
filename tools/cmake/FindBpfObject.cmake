@@ -139,18 +139,20 @@ else()
 endif()
 
 # Get target arch
-execute_process(COMMAND uname -m
-  COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/" -e "s/riscv64/riscv/"
-  OUTPUT_VARIABLE ARCH_output
-  ERROR_VARIABLE ARCH_error
-  RESULT_VARIABLE ARCH_result
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(${ARCH_result} EQUAL 0)
-  set(ARCH ${ARCH_output})
-  message(STATUS "BPF target arch: ${ARCH}")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+  set(ARCH x86)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+  set(ARCH arm64)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le")
+  set(ARCH powerpc)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "mips")
+  set(ARCH mips)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv64")
+  set(ARCH riscv)
 else()
-  message(FATAL_ERROR "Failed to determine target architecture: ${ARCH_error}")
+  set(ARCH ${CMAKE_SYSTEM_PROCESSOR})
 endif()
+message(STATUS "BPF target arch: ${ARCH}")
 
 # Public macro
 macro(bpf_object name input)
