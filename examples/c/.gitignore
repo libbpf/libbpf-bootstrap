@@ -16,5 +16,7 @@
 /lsm
 /cmake-build-debug/
 /cmake-build-release/
-/snooper
 compile_commands.json
+/app
+/libapp.so
+/snooper
