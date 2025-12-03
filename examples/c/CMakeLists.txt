@@ -127,6 +127,6 @@ foreach(app ${apps})
       ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/capi/include)
     target_link_libraries(${app_stem}
       ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/${CARGO_TARGET}/release/libblazesym_c.a -lpthread -lrt -ldl)
-    add_dependencies(${app_stem} blazesym-build)
+    add_dependencies(${app_stem} blazesym)
   endif()
 endforeach()
