@@ -59,8 +59,6 @@ if(CARGO_EXISTS)
       message((FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}"))
     endif()
 
-    set(LIBBLAZESYM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/${CARGO_TARGET}/release/libblazesym_c.a)
-
     ExternalProject_Add(blazesym
       PREFIX blazesym
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
@@ -73,8 +71,6 @@ if(CARGO_EXISTS)
       STEP_TARGETS build
     )
   else() # Host
-    set(LIBBLAZESYM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym_c.a)
-
     ExternalProject_Add(blazesym
       PREFIX blazesym
       SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym
@@ -130,7 +126,7 @@ foreach(app ${apps})
     target_include_directories(${app_stem} PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/capi/include)
     target_link_libraries(${app_stem}
-      ${LIBBLAZESYM_PATH} -lpthread -lrt -ldl)
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/${CARGO_TARGET}/release/libblazesym_c.a -lpthread -lrt -ldl)
     add_dependencies(${app_stem} blazesym-build)
   endif()
 endforeach()
