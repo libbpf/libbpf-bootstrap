@@ -1,5 +1,6 @@
 /.output
 /bootstrap
+/bootstrap_legacy
 /minimal
 /minimal_legacy
 /minimal_ns
