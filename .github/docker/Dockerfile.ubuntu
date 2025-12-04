@@ -38,8 +38,11 @@ RUN apt-get update && apt-get install -y \
       llvm-${LLVM_VERSION}-runtime \
       libllvm${LLVM_VERSION} \
       make cmake pkg-config \
-      rustc cargo rustfmt \
       sudo \
       && apt-get -y clean
+
+# Install Rust via rustup to get a recent version (required for blazesym dependencies)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --component rustfmt
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN ln -s /usr/bin/clang-${LLVM_VERSION} /usr/bin/clang && ln -s /usr/bin/llvm-strip-${LLVM_VERSION} /usr/bin/llvm-strip
