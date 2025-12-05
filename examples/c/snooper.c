@@ -104,6 +104,13 @@ static int handle_event(void *ctx, void *data, size_t size)
 
 	printf("Task: %s (PID=%d, TID=%d)\n", event->comm, event->pid, event->tid);
 
+	if (event->py_ver) {
+		printf("  Running Python v%u.%u.%u!\n",
+		       (__u8)(event->py_ver >> 24),
+		       (__u8)(event->py_ver >> 16),
+		       (__u8)(event->py_ver >> 8));
+	}
+
 	if (event->has_tls)
 		printf("  TLS: %s = %d\n", skel->bss->tls_var_name, (int)event->tls_value);
 

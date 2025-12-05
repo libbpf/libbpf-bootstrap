@@ -636,6 +636,27 @@ static int enumerate_vmas(struct task_struct *task, struct task_event *event)
 		if (err)
 			goto next;
 
+		if (task->pid == task->tgid) {
+			int sym_idx = find_sym(&fdptr, &s->elf, "Py_Version", STT_OBJECT, s);
+			if (sym_idx > 0) {
+				long py_ver_addr = vma->vm_start - vma->vm_pgoff * __PAGE_SIZE + s->sym.st_value;
+				bpf_printk("[PY] Found 'Py_Version' global variable for PID %d (%s) in '%s' at %px",
+					   task->pid, task->comm, vma_name, py_ver_addr);
+
+				__u32 py_ver;
+				err = bpf_copy_from_user_task(&py_ver, sizeof(py_ver), (void *)py_ver_addr, task, 0);
+				if (err) {
+					bpf_printk("[PY] Failed to read Py_Version at %px for '%s': %d",
+						   py_ver_addr, vma_name, err);
+				} else {
+					bpf_printk("[PY] PID %d (%s) is running Python v%u.%u.%u!",
+						   task->pid, task->comm,
+						   (u8)(py_ver >> 24), (u8)(py_ver >> 16), (u8)(py_ver >> 8), py_ver);
+					event->py_ver = py_ver;
+				}
+			}
+		}
+
 		//print_symbols(&fdptr, &s->elf, s);
 
 		long tls_addr = find_tls_var(task, vma, vma_name, &fdptr, tls_var_name, s);
@@ -681,6 +702,7 @@ static int task_work_cb(struct bpf_map *map, void *key, void *value)
 		goto cleanup;
 	}
 
+	event->py_ver = 0;
 	event->has_tls = false;
 	event->ustack_sz = unwind_user_stack(task, event->ustack, MAX_STACK_DEPTH);
 

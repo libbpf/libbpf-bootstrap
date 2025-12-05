@@ -23,6 +23,7 @@ struct task_event {
 	stack_trace_t ustack;
 	bool has_tls;
 	long tls_value;
+	__u32 py_ver;
 };
 
 #endif /* __SNOOPER_H_ */
