@@ -21,6 +21,8 @@ struct task_event {
 	__s32 ustack_sz;
 	stack_trace_t kstack;
 	stack_trace_t ustack;
+	bool has_tls;
+	long tls_value;
 };
 
 #endif /* __SNOOPER_H_ */

@@ -27,8 +27,13 @@ extern int bpf_dynptr_file_discard(struct bpf_dynptr *dynptr) __ksym __weak;
 #define ELFCLASS64	2
 #define EI_CLASS	4
 
+/* ELF types (e_type) */
+#define ET_EXEC		2	/* Executable file */
+#define ET_DYN		3	/* Shared object file */
+
 #define SHT_SYMTAB	2
 #define SHT_STRTAB	3
+#define SHT_RELA	4
 #define SHT_DYNSYM	11
 
 #define STT_NOTYPE	0
@@ -38,7 +43,13 @@ extern int bpf_dynptr_file_discard(struct bpf_dynptr *dynptr) __ksym __weak;
 #define STT_FILE	4
 #define STT_COMMON	5
 #define STT_TLS		6
+
 #define ELF64_ST_TYPE(info)	((info) & 0xf)
+#define ELF64_R_SYM(info)	((info) >> 32)
+#define ELF64_R_TYPE(info)	((info) & 0xffffffff)
+
+#define R_X86_64_DTPMOD64	16
+#define R_X86_64_DTPOFF64	17
 
 #define VM_EXEC		0x00000004
 
@@ -69,11 +80,21 @@ struct elf_symtab {
 	u64 strtab_off;
 };
 
+struct elf_relasec {
+	u32 shndx;
+	u32 rela_cnt;
+	u64 rela_off;
+};
+
 struct elf {
+	u16 type;  /* ET_EXEC or ET_DYN */
 	u64 shoff; /* section headers list offset */
 	u32 shnum; /* number of sections */
 
-	struct elf_symtab symtab, dynsym;
+	struct elf_symtab symtab;
+
+	struct elf_symtab dynsym;
+	struct elf_relasec rela_dyn;  /* .rela.dyn section info */
 };
 
 struct scratch {
@@ -84,10 +105,13 @@ struct scratch {
 	struct elf64_shdr strtab_shdr;
 
 	struct elf64_sym sym;
+	struct elf64_rela rela;
 	char sym_name[MAX_SYM_NAME];
 };
 
 static int zero = 0;
+
+char tls_var_name[64];
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -161,6 +185,7 @@ static int parse_elf(struct bpf_dynptr *fdptr, struct elf *elf, struct scratch *
 		return -EOPNOTSUPP;
 	}
 
+	elf->type = s->ehdr.e_type;
 	elf->shoff = s->ehdr.e_shoff;
 	elf->shnum = s->ehdr.e_shnum;
 
@@ -170,6 +195,7 @@ static int parse_elf(struct bpf_dynptr *fdptr, struct elf *elf, struct scratch *
 
 	elf->symtab.shndx = 0;
 	elf->dynsym.shndx = 0;
+	elf->rela_dyn.shndx = 0;
 
 	bpf_for(i, 1, elf->shnum) {
 		u64 symtab_off, symtab_size, strtab_shdr_off;
@@ -182,39 +208,48 @@ static int parse_elf(struct bpf_dynptr *fdptr, struct elf *elf, struct scratch *
 			break;
 		}
 
-		if (s->shdr.sh_type != SHT_SYMTAB && s->shdr.sh_type != SHT_DYNSYM)
-			continue;
+		if (s->shdr.sh_type == SHT_RELA) {
+			/* Handle .rela.dyn section (SHT_RELA linked to .dynsym) */
+			u32 rela_entsize = s->shdr.sh_entsize ?: sizeof(struct elf64_rela);
 
-		symtab_off = s->shdr.sh_offset;
-		symtab_size = s->shdr.sh_size;
-		symtab_entsize = s->shdr.sh_entsize ?: sizeof(struct elf64_sym);
+			if (elf->rela_dyn.shndx == 0) {
+				/* TODO: validate that shdr.sh_link points to SHT_DYNSYM section */
+				elf->rela_dyn.shndx = i;
+				elf->rela_dyn.rela_off = s->shdr.sh_offset;
+				elf->rela_dyn.rela_cnt = s->shdr.sh_size / rela_entsize;
+			}
+		} else if (s->shdr.sh_type == SHT_SYMTAB || s->shdr.sh_type == SHT_DYNSYM) {
+			symtab_off = s->shdr.sh_offset;
+			symtab_size = s->shdr.sh_size;
+			symtab_entsize = s->shdr.sh_entsize ?: sizeof(struct elf64_sym);
 
-		/* sh_link points to the associated string table */
-		strtab_idx = s->shdr.sh_link;
-		strtab_shdr_off = elf->shoff + strtab_idx * sizeof(struct elf64_shdr);
-		err = bpf_dynptr_read(&s->strtab_shdr, sizeof(s->strtab_shdr), fdptr, strtab_shdr_off, 0);
-		if (err) {
-			bpf_printk("  [ELF] Failed to read strtab shdr[%d]: %d", strtab_idx, err);
-			return err;
+			/* sh_link points to the associated string table */
+			strtab_idx = s->shdr.sh_link;
+			strtab_shdr_off = elf->shoff + strtab_idx * sizeof(struct elf64_shdr);
+			err = bpf_dynptr_read(&s->strtab_shdr, sizeof(s->strtab_shdr), fdptr, strtab_shdr_off, 0);
+			if (err) {
+				bpf_printk("  [ELF] Failed to read strtab shdr[%d]: %d", strtab_idx, err);
+				return err;
+			}
+
+			//bpf_printk("  [ELF] Found %s: off=%llu, cnt=%llu",
+			//	   s->shdr.sh_type == SHT_SYMTAB ? ".symtab" : ".dynsym",
+			//	   symtab_off, symtab_size / symtab_entsize);
+
+			if (s->shdr.sh_type == SHT_SYMTAB) {
+				elf->symtab.shndx = i;
+				elf->symtab.symtab_off = symtab_off;
+				elf->symtab.symtab_cnt = symtab_size / symtab_entsize;
+				elf->symtab.strtab_off = s->strtab_shdr.sh_offset;
+			} else {
+				elf->dynsym.shndx = i;
+				elf->dynsym.symtab_off = symtab_off;
+				elf->dynsym.symtab_cnt = symtab_size / symtab_entsize;
+				elf->dynsym.strtab_off = s->strtab_shdr.sh_offset;
+			}
 		}
 
-		//bpf_printk("  [ELF] Found %s: off=%llu, cnt=%llu",
-		//	   s->shdr.sh_type == SHT_SYMTAB ? ".symtab" : ".dynsym",
-		//	   symtab_off, symtab_size / symtab_entsize);
-
-		if (s->shdr.sh_type == SHT_SYMTAB) {
-			elf->symtab.shndx = i;
-			elf->symtab.symtab_off = symtab_off;
-			elf->symtab.symtab_cnt = symtab_size / symtab_entsize;
-			elf->symtab.strtab_off = s->strtab_shdr.sh_offset;
-		} else {
-			elf->dynsym.shndx = i;
-			elf->dynsym.symtab_off = symtab_off;
-			elf->dynsym.symtab_cnt = symtab_size / symtab_entsize;
-			elf->dynsym.strtab_off = s->strtab_shdr.sh_offset;
-		}
-
-		if (elf->dynsym.shndx && elf->symtab.shndx)
+		if (elf->dynsym.shndx && elf->symtab.shndx && elf->rela_dyn.shndx)
 			break;
 	}
 
@@ -235,7 +270,7 @@ static const char *sym_type_str(u8 type)
 	}
 }
 
-static int find_sym(struct bpf_dynptr *fdptr, struct elf_symtab *symtab,
+static int find_symtab_sym(struct bpf_dynptr *fdptr, struct elf_symtab *symtab,
 		    const char *sym_name, int sym_type,
 		    struct scratch *s)
 {
@@ -276,9 +311,18 @@ static int find_sym(struct bpf_dynptr *fdptr, struct elf_symtab *symtab,
 	return -ENOENT;
 }
 
-/*
- * Iterate symbols from a symbol table and print all symbols.
- */
+static int find_sym(struct bpf_dynptr *fdptr, struct elf *elf, const char *sym_name, int sym_type, struct scratch *s)
+{
+	int idx;
+
+	idx = find_symtab_sym(fdptr, &elf->dynsym, sym_name, sym_type, s);
+	if (idx > 0)
+		return idx;
+
+	return find_symtab_sym(fdptr, &elf->symtab, sym_name, sym_type, s);
+}
+
+/* Iterate symbols from a symbol table and print all symbols. */
 static void print_symtab(struct bpf_dynptr *fdptr, struct elf_symtab *symtab,
 			 const char *name, struct scratch *s)
 {
@@ -317,10 +361,7 @@ static void print_symtab(struct bpf_dynptr *fdptr, struct elf_symtab *symtab,
 	}
 }
 
-/*
- * Parse ELF file and print all symbols using bpf_printk.
- */
-static void parse_elf_symbols(struct bpf_dynptr *fdptr, struct elf *elf, struct scratch *s)
+static void print_symbols(struct bpf_dynptr *fdptr, struct elf *elf, struct scratch *s)
 {
 	print_symtab(fdptr, &elf->symtab, ".symtab", s);
 	print_symtab(fdptr, &elf->dynsym, ".dynsym", s);
@@ -329,10 +370,222 @@ static void parse_elf_symbols(struct bpf_dynptr *fdptr, struct elf *elf, struct 
 int MINUS_ONE = -1;
 
 /*
+ * On x86_64, TLS is accessed via the FS segment register.
+ * The FS base points to the Thread Control Block (TCB).
+ *
+ * TCB layout (glibc):
+ *   offset 0:  void *tcb        - self pointer
+ *   offset 8:  dtv_t *dtv       - Dynamic Thread Vector
+ *   offset 16: void *self       - thread descriptor
+ *   ...
+ *
+ * DTV layout:
+ *   dtv[0].counter = generation/size
+ *   dtv[1].pointer.val = TLS block for module 1 (main executable)
+ *   dtv[2].pointer.val = TLS block for module 2 (first shared lib)
+ *   ...
+ *
+ * For Initial Exec (IE) model (main executable TLS):
+ *   TLS vars are accessed as negative offsets from TP (thread pointer)
+ *   TP = fsbase (on x86_64 with glibc)
+ *
+ * For General Dynamic (GD) model (shared library TLS):
+ *   __tls_get_addr() is called with {module_id, offset}
+ *   Returns: dtv[module_id].pointer.val + offset
+ */
+
+/* https://github.com/bminor/glibc/blob/master/sysdeps/generic/dl-dtv.h#L29 */
+typedef union dtv {
+	size_t counter;
+	struct dtv_pointer {
+		void *val;
+		void *to_free;
+	} pointer;
+} dtv_t;
+
+/* Partial definition for tcbhead_t
+ * https://github.com/bminor/glibc/blob/master/sysdeps/x86_64/nptl/tls.h#L42
+ */
+typedef struct {
+	void *tcb;
+	dtv_t *dtv;
+} tcbhead_t;
+
+struct tls_index {
+	long mod_id;
+	long offset;
+};
+
+/*
+ * Find the GOT entry offset for a TLS symbol by scanning .rela.dyn for
+ * R_X86_64_DTPMOD64 relocations matching the symbol index.
+ *
+ * At runtime, this GOT entry contains {module_id, tls_offset} which can be
+ * read from the loaded library's memory.
+ *
+ * Returns: GOT virt offset on success, negative error on failure
+ */
+static long find_tls_got_entry(struct bpf_dynptr *fdptr, struct elf *elf,
+			      u32 sym_idx, struct scratch *s)
+{
+	int err, i;
+
+	if (!elf->rela_dyn.shndx)
+		return -ENOENT;
+
+	bpf_for(i, 0, elf->rela_dyn.rela_cnt) {
+		u64 rela_off = elf->rela_dyn.rela_off + i * sizeof(struct elf64_rela);
+		u32 rela_sym, rela_type;
+
+		err = bpf_dynptr_read(&s->rela, sizeof(s->rela), fdptr, rela_off, 0);
+		if (err)
+			return err;
+
+		rela_type = ELF64_R_TYPE(s->rela.r_info);
+		if (rela_type != R_X86_64_DTPMOD64)
+			continue;
+
+		rela_sym = ELF64_R_SYM(s->rela.r_info);
+		if (sym_idx && rela_sym != sym_idx)
+			continue;
+
+		/* r_offset is the GOT entry offset */
+		return s->rela.r_offset;
+	}
+
+	return -ENOENT;
+}
+
+/* Read tls_index {module_id, offset} from loaded library memory.  */
+static inline int read_got_entry(struct task_struct *task, struct vm_area_struct *vma, const char *vma_name,
+				 struct bpf_dynptr *fdptr, struct scratch *s, long got_off, struct tls_index *tls_index)
+{
+	/* TODO: this should translate file offset to virtoffset by looking at section header */
+	long got_addr = vma->vm_start - vma->vm_pgoff * __PAGE_SIZE + got_off;
+
+	int err = bpf_copy_from_user_task(tls_index, sizeof(*tls_index), (void *)got_addr, task, 0);
+	if (err) {
+		bpf_printk("[TLS] Failed to read GOT entry for '%s' at %px: %d", vma_name, got_addr, err);
+		return -EPROTO;
+	}
+
+	bpf_printk("[TLS] GOT TLS index for '%s' at %px: module_id=%ld, offset=%ld",
+		   vma_name, got_addr, tls_index->mod_id, tls_index->offset);
+
+	return 0;
+}
+
+/* Figure out absolute address of a TLS variable identified by module ID + offset */
+static long find_tls_addr(struct task_struct *task, long module_id, long offset)
+{
+	long dtv_ptr, tls_block;
+	int err;
+
+	long fsbase = task->thread.fsbase;
+
+	/* Read DTV pointer from TCB (offset 8) */
+	err = bpf_copy_from_user_task(&dtv_ptr, sizeof(dtv_ptr),
+				      (void *)(fsbase + offsetof(tcbhead_t, dtv)), task, 0);
+	if (err) {
+		bpf_printk("[TLS] Failed to read DTV pointer: %d", err);
+		return err;
+	}
+
+	//bpf_printk("[TLS] fsbase=%px, dtv=%px", fsbase, dtv_ptr);
+
+	/*
+	 * Read TLS block pointer from DTV[module_id].
+	 * Each DTV entry is 16 bytes (see dtv_t above).
+	 */
+	err = bpf_copy_from_user_task(&tls_block, sizeof(tls_block),
+				      (void *)(dtv_ptr + module_id * sizeof(dtv_t)), task, 0);
+	if (err) {
+		bpf_printk("[TLS] Failed to read DTV[%ld]: %d", module_id, err);
+		return err;
+	}
+
+	//bpf_printk("[TLS] dtv[%ld].val = %px", module_id, tls_block);
+
+	/* Special value -1 means TLS block not yet allocated */
+	if (tls_block == (u64)-1) {
+		bpf_printk("[TLS] TLS block not allocated for module %ld", module_id);
+		return -ENOENT;
+	}
+
+	return tls_block + offset;
+}
+
+static long find_tls_var(struct task_struct *task, struct vm_area_struct *vma, const char *vma_name,
+			 struct bpf_dynptr *fdptr, const char *tls_var_name, struct scratch *s)
+{
+	struct tls_index tls_index;
+	int err;
+
+	int sym_idx = find_symtab_sym(fdptr, &s->elf.dynsym, tls_var_name, STT_TLS, s);
+	if (sym_idx > 0) {
+		bpf_printk("[TLS] Found TLS symbol '%s' in .dynsym for '%s': st_value=%llx sz=%llu shndx=%u",
+			   s->sym_name, vma_name,
+			   s->sym.st_value, s->sym.st_size, s->sym.st_shndx);
+
+		long got_off = find_tls_got_entry(fdptr, &s->elf, sym_idx, s);
+		//bpf_printk("[TLS] GOT entry at virt offset 0x%llx", got_off);
+		if (got_off < 0) {
+			bpf_printk("[TLS] No GOT entry found for symbol #%d: %ld", sym_idx, got_off);
+			return -EPROTO;
+		}
+
+		/* Read tls_index {module_id, offset} from loaded library memory.  */
+		err = read_got_entry(task, vma, vma_name, fdptr, s, got_off, &tls_index);
+		if (err) {
+			bpf_printk("[TLS] Failed reading GOT entry symbol #%d at %px: %ld",
+				   sym_idx, got_off);
+			return err;
+		}
+
+		return find_tls_addr(task, tls_index.mod_id, tls_index.offset);
+	}
+
+	/* local TLS variable not in .dynsym */
+	sym_idx = find_symtab_sym(fdptr, &s->elf.symtab, tls_var_name, STT_TLS, s);
+	if (sym_idx > 0) {
+		bpf_printk("[TLS] Found TLS symbol '%s' in .symtab for '%s': st_value=%llx sz=%llu shndx=%u",
+			   s->sym_name, vma_name,
+			   s->sym.st_value, s->sym.st_size, s->sym.st_shndx);
+
+		if (s->elf.type == ET_EXEC) {
+			/* for local exec TLS model, module ID is 1 */
+			return find_tls_addr(task, 1, s->sym.st_value);
+		} else {
+			/*
+			 * For local symbol in shared lib, try to find module ID using *ANY*
+			 * DTPMOD64 relo, and then assume that st_value gives us valid offset
+			 * within module's block.
+			 */
+			long got_off = find_tls_got_entry(fdptr, &s->elf, 0, s);
+			if (got_off < 0) {
+				bpf_printk("[TLS] No GOT entry (any at all) found in '%s': %ld", vma_name, got_off);
+				return -EOPNOTSUPP;
+			}
+
+			/* Read tls_index {module_id, offset} from loaded library memory.  */
+			err = read_got_entry(task, vma, vma_name, fdptr, s, got_off, &tls_index);
+			if (err)
+				return err;
+
+			return find_tls_addr(task, tls_index.mod_id, s->sym.st_value);
+		}
+
+		return -EOPNOTSUPP;
+	}
+
+	return -ENOENT;
+}
+
+/*
  * Iterate VMAs of the current task, find executable file-backed VMAs,
  * and parse their ELF symbols.
  */
-static int enumerate_vmas(struct task_struct *task)
+static int enumerate_vmas(struct task_struct *task, struct task_event *event)
 {
 	struct vm_area_struct *vma;
 	struct scratch *s;
@@ -343,7 +596,7 @@ static int enumerate_vmas(struct task_struct *task)
 	if (!s)
 		return 0; /* can't happen */
 
-	bpf_printk("[VMA] Enumerating VMAs for task %d (%s)", task->pid, task->comm);
+	//bpf_printk("[VMA] Enumerating VMAs for task %d (%s)", task->pid, task->comm);
 
 	bpf_for_each(task_vma, vma, task, 0) {
 		struct bpf_dynptr fdptr;
@@ -370,9 +623,8 @@ static int enumerate_vmas(struct task_struct *task)
 			continue;
 
 		const char *vma_name = (const char *)file->f_path.dentry->d_name.name;
-		bpf_printk("[VMA] Executable file-backed VMA: 0x%lx-0x%lx (ino=%llu, name=%s)",
-			   vma->vm_start, vma->vm_end, ino, vma_name);
-
+		//bpf_printk("[VMA] Executable file-backed VMA: 0x%lx-0x%lx (ino=%llu, name=%s)",
+		//	   vma->vm_start, vma->vm_end, ino, vma_name);
 
 		err = bpf_dynptr_from_file(file, 0, &fdptr);
 		if (err) {
@@ -384,24 +636,29 @@ static int enumerate_vmas(struct task_struct *task)
 		if (err)
 			goto next;
 
-		//parse_elf_symbols(&fdptr, &s->elf, s);
+		//print_symbols(&fdptr, &s->elf, s);
 
-		if (task->pid != task->tgid)
+		long tls_addr = find_tls_var(task, vma, vma_name, &fdptr, tls_var_name, s);
+		if (tls_addr == -ENOENT)
 			goto next;
-
-		int sym_idx = find_sym(&fdptr, &s->elf.dynsym, "tls_shared", STT_TLS, s);
-		if (sym_idx > 0) {
-			bpf_printk("FOUND TLS SYM '%s' in .dynsym for '%s': st_value=%llx sz=%llu, shndx=%u\n",
-				   s->sym_name, vma_name,
-				   s->sym.st_value, s->sym.st_size, s->sym.st_shndx);
+		if (tls_addr < 0) {
+			bpf_printk("[TLS] Failed to figure TLS address of '%s' variable: %ld", tls_var_name, tls_addr);
 			goto next;
 		}
-		sym_idx = find_sym(&fdptr, &s->elf.symtab, "tls_shared", STT_TLS, s);
-		if (sym_idx > 0) {
-			bpf_printk("FOUND TLS SYM '%s' in .symtab for '%s': st_value=%llx sz=%llu, shndx=%u\n",
-				   s->sym_name, vma_name,
-				   s->sym.st_value, s->sym.st_size, s->sym.st_shndx);
+
+		/* Read the actual TLS variable */
+		int val;
+		err = bpf_copy_from_user_task(&val, sizeof(val), (void *)tls_addr, task, 0);
+		if (err) {
+			bpf_printk("[TLS] Failed to read TLS var at %px: %d", tls_addr, err);
+			goto next;
 		}
+
+		bpf_printk("[TLS] TLS variable '%s' found in '%s' (TID %d '%s') = %d",
+			   tls_var_name, vma_name, task->pid, task->comm, val);
+
+		event->has_tls = true;
+		event->tls_value = val;
 
 next:
 		bpf_dynptr_file_discard(&fdptr);
@@ -424,9 +681,10 @@ static int task_work_cb(struct bpf_map *map, void *key, void *value)
 		goto cleanup;
 	}
 
+	event->has_tls = false;
 	event->ustack_sz = unwind_user_stack(task, event->ustack, MAX_STACK_DEPTH);
 
-	enumerate_vmas(task);
+	enumerate_vmas(task, event);
 
 	bpf_ringbuf_output(&rb, event, sizeof(*event), 0);
 cleanup:

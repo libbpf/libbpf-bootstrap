@@ -98,7 +98,9 @@ static void *thread_func(void *arg)
 	while (1) {
 		time_t now;
 
+		errno = 123456789;
 		func_mux(10);
+		errno = 987654321;
 
 		now = time(NULL);
 		if (now > last_print) {

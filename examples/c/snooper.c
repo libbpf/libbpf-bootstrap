@@ -17,6 +17,7 @@
 
 static struct blaze_symbolizer *symbolizer;
 static volatile bool exiting = false;
+struct snooper_bpf *skel;
 
 static void sig_handler(int sig)
 {
@@ -103,6 +104,9 @@ static int handle_event(void *ctx, void *data, size_t size)
 
 	printf("Task: %s (PID=%d, TID=%d)\n", event->comm, event->pid, event->tid);
 
+	if (event->has_tls)
+		printf("  TLS: %s = %d\n", skel->bss->tls_var_name, (int)event->tls_value);
+
 	/* Show kernel stack trace */
 	if (event->kstack_sz > 0) {
 		printf("  Kernel stack:\n");
@@ -129,14 +133,13 @@ static int handle_event(void *ctx, void *data, size_t size)
 
 static void show_help(const char *progname)
 {
-	printf("Usage: %s <PID>\n", progname);
+	printf("Usage: %s <PID> <thread-local-var-name>\n", progname);
 	printf("  PID   Process ID to filter tasks (required)\n");
 }
 
 int main(int argc, char **argv)
 {
 	struct ring_buffer *rb = NULL;
-	struct snooper_bpf *skel = NULL;
 	LIBBPF_OPTS(bpf_iter_attach_opts, opts);
 	union bpf_iter_link_info linfo;
 	pid_t pid_filter = 0;
@@ -144,7 +147,7 @@ int main(int argc, char **argv)
 	int err = 0;
 	char dummy;
 
-	if (argc < 2) {
+	if (argc < 3) {
 		show_help(argv[0]);
 		return 1;
 	}
@@ -167,6 +170,9 @@ int main(int argc, char **argv)
 		err = -1;
 		goto cleanup;
 	}
+
+	snprintf(skel->bss->tls_var_name, sizeof(skel->bss->tls_var_name),
+		 "%s", argv[2]);
 
 	symbolizer = blaze_symbolizer_new();
 	if (!symbolizer) {
