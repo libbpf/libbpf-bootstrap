@@ -77,6 +77,7 @@ find_package(BpfObject REQUIRED)
 file(GLOB apps *.bpf.c)
 if(NOT CARGO_EXISTS)
   list(REMOVE_ITEM apps ${CMAKE_CURRENT_SOURCE_DIR}/profile.bpf.c)
+  list(REMOVE_ITEM apps ${CMAKE_CURRENT_SOURCE_DIR}/snooper.bpf.c)
 endif()
 foreach(app ${apps})
   get_filename_component(app_stem ${app} NAME_WE)
@@ -88,6 +89,12 @@ foreach(app ${apps})
   add_executable(${app_stem} ${app_stem}.c)
   target_link_libraries(${app_stem} ${app_stem}_skel)
   if(${app_stem} STREQUAL profile)
+    target_include_directories(${app_stem} PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/capi/include)
+    target_link_libraries(${app_stem}
+      ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/target/release/libblazesym_c.a -lpthread -lrt -ldl)
+  endif()
+  if(${app_stem} STREQUAL snooper)
     target_include_directories(${app_stem} PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/../../blazesym/capi/include)
     target_link_libraries(${app_stem}
