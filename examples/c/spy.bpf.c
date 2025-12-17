@@ -1,21 +1,19 @@
-// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
-/* Copyright (c) 2020 Facebook */
-#include <linux/bpf.h>
-#include <bpf/bpf_helpers.h>
-
+#include "vmlinux.h"
+ #include <bpf/bpf_helpers.h> 
+SEC("tracepoint/syscalls/sys_enter_openat")
+ int handle_openat(struct trace_event_raw_sys_enter *ctx) { 
+/* ctx->args[] holds the arguments for the system call.
+ For openat, the arguments are:
+ 0: dfd
+ 1: filename (This is what we want!)
+ 2: flags 3: mode */
+ char filename[256];
+ // Step 1: Get the pointer to the filename from the arguments 
+const char *user_ptr = (const char *)ctx->args[1];
+ // Step 2: Safely copy the string from user space to our variable 
+// If we don't do this, the verifier will reject the code.
+ bpf_probe_read_user_str(filename, sizeof(filename), user_ptr); 
+// Step 3: Print it to the trace pipe so we can see it
+ bpf_printk("Spy detected openat: %s\n", filename); return 0; 
+} 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
-
-int my_pid = 0;
-
-SEC("tp/syscalls/sys_enter_write")
-int handle_tp(void *ctx)
-{
-	int pid = bpf_get_current_pid_tgid() >> 32;
-
-	if (pid != my_pid)
-		return 0;
-
-	bpf_printk("BPF triggered from PID %d.\n", pid);
-
-	return 0;
-}
