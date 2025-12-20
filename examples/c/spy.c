@@ -49,7 +49,9 @@ int main(int argc, char **argv)
 
 	for (;;) {
 		/* trigger our BPF program */
-		fprintf(stderr, ".");
+		// Inside your C code where you print the event:
+printf("%d,%s,%s\n", event->pid, event->comm, event->filename);
+fflush(stdout); // Crucial! This ensures Python sees the data immediately.
 		sleep(1);
 	}
 
