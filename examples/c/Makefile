@@ -24,7 +24,7 @@ INCLUDES := -I$(OUTPUT) -I../../libbpf/include/uapi -I$(dir $(VMLINUX)) -I$(LIBB
 CFLAGS := -g -Wall
 ALL_LDFLAGS := $(LDFLAGS) $(EXTRA_LDFLAGS)
 
-APPS = minimal minimal_legacy minimal_ns bootstrap bootstrap_legacy uprobe kprobe fentry \
+APPS = minimal spy minimal_legacy minimal_ns bootstrap bootstrap_legacy uprobe kprobe fentry \
        usdt sockfilter tc ksyscall task_iter lsm
 
 CARGO ?= $(shell which cargo)
