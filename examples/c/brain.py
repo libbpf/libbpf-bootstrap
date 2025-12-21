@@ -31,7 +31,7 @@ def get_features(pid, comm, filename):
         1 if ".cache" in filename else 0 # Cache flag
     ]
 
-print("🛡️  KernelTrace AI: Adaptive Engine Starting...")
+print(" KernelTrace AI: Adaptive Engine Starting...")
 
 try:
     for line in sys.stdin:
@@ -48,7 +48,7 @@ try:
 
             # 2. Initial Training
             if model is None and len(window) == WINDOW_SIZE:
-                print("📈 Baseline captured. Protection Active.")
+                print(" Baseline captured. Protection Active.")
                 model = IsolationForest(contamination=CONTAMINATION, n_jobs=-1)
                 model.fit(list(window))
 
@@ -56,7 +56,7 @@ try:
             if model and events_since_train >= RETRAIN_EVERY:
                 model.fit(list(window))
                 events_since_train = 0
-                # print("♻️ AI Brain updated with recent system patterns.")
+                # print("AI Brain updated with recent system patterns.")
 
             # 4. Anomaly Detection
             if model:
@@ -64,12 +64,12 @@ try:
                 if prediction == -1:
                     score = model.decision_function([features])[0]
                     # Print formatted for the Bun server pipe
-                    print(f"🚨 ALERT | Score: {score:.3f} | Proc: {comm} | Path: {filename}")
+                    print(f" ALERT | Score: {score:.3f} | Proc: {comm} | Path: {filename}")
                     sys.stdout.flush() # Ensure the pipe sees this immediately
 
         except ValueError:
             continue
 
 except KeyboardInterrupt:
-    print("\n\n👋 Brain shutting down safely. Great hunt!")
+    print("\n\n Brain shutting down safely. Great hunt!")
     sys.exit(0)
