@@ -1,27 +1,38 @@
 import sys
+import pandas as pd
+from sklearn.ensemble import IsolationForest
 
-print("AI Brain is online. Waiting for kernel data...")
+# Setup the AI model
+# 'contamination' is the % of data you expect to be weird (e.g., 1%)
+model = IsolationForest(contamination=0.01)
+training_data = []
+trained = False
 
-try:
-    for line in sys.stdin:
-        # 1. Parse the incoming data
-        line = line.strip()
-        if not line:
-            continue
+print("🛡️ KernelTrace AI: Watching for anomalies...")
 
-        try:
-            pid, comm, filename = line.split(',', 2)
+for line in sys.stdin:
+    try:
+        pid, comm, filename = line.strip().split(',', 2)
+        
+        # FEATURE ENGINEERING: Turn text into numbers the AI can 'see'
+        features = [
+            float(pid), 
+            len(comm), 
+            len(filename), 
+            filename.count('/')  # Folder depth is a huge risk signal
+        ]
 
-            # 2. This is where 'Find Out' learning happens!
-            # For now, let's just flag if a specific file is touched
-            if "test.txt" in filename.lower():
-                print(f"⚠️  AI ALERT: Process {comm} (PID {pid}) accessed sensitive file: {filename}")
-
-            # todo: Future step - feed (pid, comm, filename) into Isolation Forest
-
-        except ValueError:
-            continue # Skip malformed lines
-
-except KeyboardInterrupt:
-    print("\nBrain shutting down.")
-
+        if not trained:
+            training_data.append(features)
+            if len(training_data) >= 100: # Learn from first 100 events
+                model.fit(training_data)
+                trained = True
+                print("✅ Learning complete. Active protection engaged.")
+        else:
+            prediction = model.predict([features])[0]
+            if prediction == -1: # -1 means 'Anomaly'
+                print(f"🚨 ALERT: Suspicious activity from {comm} (PID {pid})")
+                print(f"   Accessed: {filename}")
+                
+    except:
+        continue
