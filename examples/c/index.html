@@ -1,0 +1,15 @@
+<body class="bg-black text-green-500 font-mono p-8">
+  <h1 class="text-2xl mb-4 border-b border-green-900">🛡️ KERNEL-TRACE AI ENGINE</h1>
+  <div id="log" class="space-y-1 h-[80vh] overflow-y-auto"></div>
+
+  <script>
+    const ws = new WebSocket(`ws://${location.host}`);
+    const log = document.getElementById('log');
+    ws.onmessage = (e) => {
+      const entry = document.createElement('div');
+      entry.className = e.data.includes('ALERT') ? 'text-red-400 animate-pulse' : '';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${e.data}`;
+      log.prepend(entry);
+    };
+  </script>
+</body>

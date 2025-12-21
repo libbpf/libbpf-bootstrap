@@ -1,38 +1,75 @@
 import sys
-import pandas as pd
+import re
+from collections import deque
 from sklearn.ensemble import IsolationForest
 
-# Setup the AI model
-# 'contamination' is the % of data you expect to be weird (e.g., 1%)
-model = IsolationForest(contamination=0.01)
-training_data = []
-trained = False
+# --- TUNING PARAMETERS ---
+WINDOW_SIZE = 2000    # The AI remembers the last 2000 system events
+RETRAIN_EVERY = 300   # Refresh the model every 300 new events
+CONTAMINATION = 0.001 # Sensitivity (0.1% of events flagged as weird)
 
-print("🛡️ KernelTrace AI: Watching for anomalies...")
+# --- THE ENGINE ---
+window = deque(maxlen=WINDOW_SIZE)
+model = None
+events_since_train = 0
 
-for line in sys.stdin:
-    try:
-        pid, comm, filename = line.strip().split(',', 2)
-        
-        # FEATURE ENGINEERING: Turn text into numbers the AI can 'see'
-        features = [
-            float(pid), 
-            len(comm), 
-            len(filename), 
-            filename.count('/')  # Folder depth is a huge risk signal
-        ]
+def normalize_path(path):
+    """
+    Strips random hashes/hex from filenames (Spotify/Zen noise).
+    Example: 'data_A53F00B8.bin' -> 'data_HASH.bin'
+    """
+    return re.sub(r'[a-fA-F0-9]{8,}', 'HASH', path)
 
-        if not trained:
-            training_data.append(features)
-            if len(training_data) >= 100: # Learn from first 100 events
-                model.fit(training_data)
-                trained = True
-                print("✅ Learning complete. Active protection engaged.")
-        else:
-            prediction = model.predict([features])[0]
-            if prediction == -1: # -1 means 'Anomaly'
-                print(f"🚨 ALERT: Suspicious activity from {comm} (PID {pid})")
-                print(f"   Accessed: {filename}")
-                
-    except:
-        continue
+def get_features(pid, comm, filename):
+    """Turns raw kernel data into a numeric vector."""
+    norm_path = normalize_path(filename)
+    return [
+        float(pid) / 100000,          # Normalized PID
+        len(comm),                     # Process name length
+        len(norm_path),                # Normalized path length
+        norm_path.count('/'),          # Folder depth
+        1 if ".cache" in filename else 0 # Cache flag
+    ]
+
+print("🛡️  KernelTrace AI: Adaptive Engine Starting...")
+
+try:
+    for line in sys.stdin:
+        try:
+            # Parse the CSV data from the C loader
+            parts = line.strip().split(',', 2)
+            if len(parts) < 3: continue
+            pid, comm, filename = parts
+
+            # 1. Feature Engineering
+            features = get_features(pid, comm, filename)
+            window.append(features)
+            events_since_train += 1
+
+            # 2. Initial Training
+            if model is None and len(window) == WINDOW_SIZE:
+                print("📈 Baseline captured. Protection Active.")
+                model = IsolationForest(contamination=CONTAMINATION, n_jobs=-1)
+                model.fit(list(window))
+
+            # 3. Sliding Window Retrain
+            if model and events_since_train >= RETRAIN_EVERY:
+                model.fit(list(window))
+                events_since_train = 0
+                # print("♻️ AI Brain updated with recent system patterns.")
+
+            # 4. Anomaly Detection
+            if model:
+                prediction = model.predict([features])[0]
+                if prediction == -1:
+                    score = model.decision_function([features])[0]
+                    # Print formatted for the Bun server pipe
+                    print(f"🚨 ALERT | Score: {score:.3f} | Proc: {comm} | Path: {filename}")
+                    sys.stdout.flush() # Ensure the pipe sees this immediately
+
+        except ValueError:
+            continue
+
+except KeyboardInterrupt:
+    print("\n\n👋 Brain shutting down safely. Great hunt!")
+    sys.exit(0)
