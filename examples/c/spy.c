@@ -11,51 +11,51 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 {
 	return vfprintf(stderr, format, args);
 }
+/* This struct must match exactly what is in your spy.bpf.c */
+struct event {
+    int pid;
+    char comm[16];
+    char filename[256];
+};
 
-int main(int argc, char **argv)
-{
-	struct spy_bpf *skel;
-	int err;
+/* The Callback: This is called every time a new event arrives */
+static int handle_event(void *ctx, void *data, size_t data_sz) {
+    const struct event *e = data;
+    
+    /* Clean output for the Python Brain to read */
+    printf("%d,%s,%s\n", e->pid, e->comm, e->filename);
+    fflush(stdout); 
+    return 0;
+}
+int main(int argc, char **argv) {
+    struct spy_bpf *skel;
+    struct ring_buffer *rb = NULL;
+    int err;
 
-	/* Set up libbpf errors and debug info callback */
-	libbpf_set_print(libbpf_print_fn);
+    skel = spy_bpf__open_and_load();
+    if (!skel) return 1;
 
-	/* Open BPF application */
-	skel = spy_bpf__open();
-	if (!skel) {
-		fprintf(stderr, "Failed to open BPF skeleton\n");
-		return 1;
-	}
+    err = spy_bpf__attach(skel);
+    if (err) goto cleanup;
 
-	/* ensure BPF program only handles write() syscalls from our process */
-	//skel->bss->my_pid = getpid();
+    /* Set up the Ring Buffer manager to use our handle_event function */
+    rb = ring_buffer__new(bpf_map__fd(skel->maps.rb), handle_event, NULL, NULL);
+    if (!rb) {
+        fprintf(stderr, "Failed to create ring buffer\n");
+        goto cleanup;
+    }
 
-	/* Load & verify BPF programs */
-	err = spy_bpf__load(skel);
-	if (err) {
-		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
-		goto cleanup;
-	}
+    printf("KernelSpy Active. Streaming to Brain...\n");
 
-	/* Attach tracepoint handler */
-	err = spy_bpf__attach(skel);
-	if (err) {
-		fprintf(stderr, "Failed to attach BPF skeleton\n");
-		goto cleanup;
-	}
-
-	printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` "
-	       "to see output of the BPF programs.\n");
-
-	for (;;) {
-		/* trigger our BPF program */
-		// Inside your C code where you print the event:
-printf("%d,%s,%s\n", event->pid, event->comm, event->filename);
-fflush(stdout); // Crucial! This ensures Python sees the data immediately.
-		sleep(1);
-	}
+    /* Poll the buffer infinitely */
+    while (true) {
+        err = ring_buffer__poll(rb, 100 /* timeout in ms */);
+        if (err == -EINTR) continue;
+        if (err < 0) break;
+    }
 
 cleanup:
-	spy_bpf__destroy(skel);
-	return -err;
+    ring_buffer__free(rb);
+    spy_bpf__destroy(skel);
+    return 0;
 }
