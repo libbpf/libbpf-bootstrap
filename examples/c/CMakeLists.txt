@@ -24,6 +24,7 @@ ExternalProject_Add(libbpf
   BUILD_IN_SOURCE TRUE
   INSTALL_COMMAND ""
   STEP_TARGETS build
+  BUILD_BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf.a
 )
 
 ExternalProject_Add(bpftool
