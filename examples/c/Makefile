@@ -31,7 +31,7 @@ CARGO ?= $(shell which cargo)
 ifeq ($(strip $(CARGO)),)
 BZS_APPS :=
 else
-BZS_APPS := profile
+BZS_APPS := profile snooper
 APPS += $(BZS_APPS)
 # Required by libblazesym
 ALL_LDFLAGS += -lrt -ldl -lpthread -lm
@@ -70,12 +70,12 @@ $(call allow-override,CC,$(CROSS_COMPILE)cc)
 $(call allow-override,LD,$(CROSS_COMPILE)ld)
 
 .PHONY: all
-all: $(APPS)
+all: $(APPS) app
 
 .PHONY: clean
 clean:
 	$(call msg,CLEAN)
-	$(Q)rm -rf $(OUTPUT) $(APPS)
+	$(Q)rm -rf $(OUTPUT) $(APPS) app libapp.so
 
 $(OUTPUT) $(OUTPUT)/libbpf $(BPFTOOL_OUTPUT):
 	$(call msg,MKDIR,$@)
@@ -136,3 +136,12 @@ $(APPS): %: $(OUTPUT)/%.o $(LIBBPF_OBJ) | $(OUTPUT)
 
 # keep intermediate (.skel.h, .bpf.o, etc) targets
 .SECONDARY:
+
+# Build target app and its shared library
+libapp.so: app_lib.c app_lib.h
+	$(call msg,SHLIB,$@)
+	$(Q)$(CC) $(CFLAGS) -shared -fPIC -o $@ app_lib.c
+
+app: app.c app_lib.h libapp.so
+	$(call msg,BINARY,$@)
+	$(Q)$(CC) $(CFLAGS) -o $@ app.c -L. -lapp -Wl,-rpath,'$$ORIGIN' -lpthread
