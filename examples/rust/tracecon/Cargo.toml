@@ -8,7 +8,7 @@ rust-version = "1.71"
 
 [dependencies]
 anyhow = "1.0"
-libbpf-rs = "0.24"
+libbpf-rs = "0.26"
 libc = "0.2"
 structopt = "0.3"
 ctrlc = "3.4"
