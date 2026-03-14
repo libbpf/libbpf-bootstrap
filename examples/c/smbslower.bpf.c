@@ -110,7 +110,7 @@ struct mid_q_entry *mid_struct)
 }
 
 SEC("fentry/__release_mid")
-int BPF_PROG(mid_release_fentry, struct kref *refcount)
+int BPF_PROG(mid_release_fentry, struct TCP_Server_Info *server, struct mid_q_entry *midEntry)
 {
     struct data *datap;
     struct event event = {};
@@ -118,22 +118,17 @@ int BPF_PROG(mid_release_fentry, struct kref *refcount)
     __u64 pid_tgid = bpf_get_current_pid_tgid();
 	__u32 pid = pid_tgid >> 32;
 
-	const typeof(((struct mid_q_entry *)0)->refcount) *__mptr = (refcount);
-	struct mid_q_entry *mid_struct =
-		(struct mid_q_entry *)((char *)__mptr - offsetof(struct mid_q_entry, refcount));
-
-	datap = bpf_map_lookup_elem(&starts, &mid_struct);
+	datap = bpf_map_lookup_elem(&starts, &midEntry);
     if (!datap)
 	{
-		bpf_printk("no op %p", &mid_struct);
 		return 0;
 	}
 
-    bpf_map_delete_elem(&starts, &mid_struct);
+    bpf_map_delete_elem(&starts, &midEntry);
 
     end_ns = bpf_ktime_get_ns();
     delta_ns = end_ns - datap->when_alloc;
-    if (delta_ns <= min_lat_ns)		// filter for min latency
+    if (delta_ns < min_lat_ns)		// filter for min latency
         return 0;
 
     event.delta_us = delta_ns / NSEC_PER_USEC;

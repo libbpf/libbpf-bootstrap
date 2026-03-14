@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
@@ -192,14 +193,14 @@ static void print_headers()
 	if (min_lat_ms)
 		printf("slower than %llu ms... ", min_lat_ms);
 	else
-		printf("slower than 10 ms... ");
+		printf("all operations... ");
 
 	if (duration)
 		printf("for %ld secs.\n", duration);
 	else
 		printf("Hit Ctrl-C to end.\n");
 
-	printf("%-8s %-14s %-7s %-25s %-12s %-17s %-16s %5s %5s %5s\n", "ENDTIME", "TASK", "PID", "TYPE",
+	printf("%-15s %-14s %-7s %-25s %-12s %-17s %-16s %5s %5s %5s\n", "ENDTIME", "TASK", "PID", "TYPE",
 	       "MID", "LATENCY(ms)", "SESSIONID", "COMPOUND_RQST", "ASYNC_RQST", "TREE_ID/ASYNC_ID");
 }
 
@@ -209,6 +210,7 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 	struct tm *tm;
 	char ts[32];
 	time_t t;
+	struct timeval tv;
 
 	if (data_sz < sizeof(e)) {
 		printf("Error: packet too small\n");
@@ -226,11 +228,13 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 		return;
 	}
 
-	time(&t);
+	gettimeofday(&tv, NULL);
+	t = tv.tv_sec;
 	tm = localtime(&t);
 	strftime(ts, sizeof(ts), "%H:%M:%S", tm);
+	snprintf(ts + strlen(ts), sizeof(ts) - strlen(ts), ".%06ld", tv.tv_usec);
 
-	printf("%-8s %-14s %-7d %-25s %-12lld %-16.3f %-16llx %12d %12d %12lld\n", ts, e.task, e.pid,
+	printf("%-15s %-14s %-7d %-25s %-12lld %-16.3f %-16llx %12d %12d %12lld\n", ts, e.task, e.pid,
 	       get_smb_command(e.smbcommand), e.mid, (double)e.delta_us / 1000, e.session_id,
 	       e.is_compounded, e.is_async, e.id);
 }

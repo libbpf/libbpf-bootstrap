@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <argp.h>
 #include <libgen.h>
 #include <signal.h>
@@ -5,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include <bpf/libbpf.h>
@@ -21,6 +23,117 @@
 
 static volatile sig_atomic_t exiting = 0;
 
+/* Callback categories */
+enum callback_category {
+	CATEGORY_FILE,
+	CATEGORY_INODE,
+	CATEGORY_ADSPACE,
+	CATEGORY_SUPER,
+};
+
+/* Callback registry entry */
+struct callback_info {
+	const char *name;
+	enum callback_category category;
+	const char *entry_prog;  /* BPF program name for entry */
+	const char *exit_prog;   /* BPF program name for exit */
+};
+
+/* Global callback registry - add new callbacks here */
+static const struct callback_info callback_registry[] = {
+	/* File operations */
+	{ "cifs_loose_read_iter", CATEGORY_FILE, "trace_file_loose_read_iter_entry", "trace_file_loose_read_iter_exit" },
+	{ "cifs_file_write_iter", CATEGORY_FILE, "trace_file_file_write_iter_entry", "trace_file_file_write_iter_exit" },
+	{ "cifs_open", CATEGORY_FILE, "trace_file_open_entry", "trace_file_open_exit" },
+	{ "cifs_close", CATEGORY_FILE, "trace_file_close_entry", "trace_file_close_exit" },
+	{ "cifs_lock", CATEGORY_FILE, "trace_file_lock_entry", "trace_file_lock_exit" },
+	{ "cifs_flock", CATEGORY_FILE, "trace_file_flock_entry", "trace_file_flock_exit" },
+	{ "cifs_fsync", CATEGORY_FILE, "trace_file_fsync_entry", "trace_file_fsync_exit" },
+	{ "cifs_flush", CATEGORY_FILE, "trace_file_flush_entry", "trace_file_flush_exit" },
+	{ "cifs_file_mmap", CATEGORY_FILE, "trace_file_file_mmap_entry", "trace_file_file_mmap_exit" },
+	{ "filemap_splice_read", CATEGORY_FILE, "trace_file_filemap_splice_read_entry", "trace_file_filemap_splice_read_exit" },
+	{ "iter_file_splice_write", CATEGORY_FILE, "trace_file_iter_file_splice_write_entry", "trace_file_iter_file_splice_write_exit" },
+	{ "cifs_llseek", CATEGORY_FILE, "trace_file_llseek_entry", "trace_file_llseek_exit" },
+	{ "cifs_ioctl", CATEGORY_FILE, "trace_file_ioctl_entry", "trace_file_ioctl_exit" },
+	{ "cifs_copy_file_range", CATEGORY_FILE, "trace_file_copy_file_range_entry", "trace_file_copy_file_range_exit" },
+	{ "cifs_remap_file_range", CATEGORY_FILE, "trace_file_remap_file_range_entry", "trace_file_remap_file_range_exit" },
+	{ "cifs_setlease", CATEGORY_FILE, "trace_file_setlease_entry", "trace_file_setlease_exit" },
+	{ "cifs_fallocate", CATEGORY_FILE, "trace_file_fallocate_entry", "trace_file_fallocate_exit" },
+	{ "cifs_strict_readv", CATEGORY_FILE, "trace_file_strict_readv_entry", "trace_file_strict_readv_exit" },
+	{ "cifs_strict_writev", CATEGORY_FILE, "trace_file_strict_writev_entry", "trace_file_strict_writev_exit" },
+	{ "cifs_strict_fsync", CATEGORY_FILE, "trace_file_strict_fsync_entry", "trace_file_strict_fsync_exit" },
+	{ "cifs_file_strict_mmap", CATEGORY_FILE, "trace_file_file_strict_mmap_entry", "trace_file_file_strict_mmap_exit" },
+	{ "cifs_direct_readv", CATEGORY_FILE, "trace_file_direct_readv_entry", "trace_file_direct_readv_exit" },
+	{ "cifs_direct_writev", CATEGORY_FILE, "trace_file_direct_writev_entry", "trace_file_direct_writev_exit" },
+	{ "copy_splice_read", CATEGORY_FILE, "trace_file_copy_splice_read_entry", "trace_file_copy_splice_read_exit" },
+	{ "cifs_readdir", CATEGORY_FILE, "trace_file_readdir_entry", "trace_file_readdir_exit" },
+	{ "cifs_closedir", CATEGORY_FILE, "trace_file_closedir_entry", "trace_file_closedir_exit" },
+	{ "generic_read_dir", CATEGORY_FILE, "trace_file_generic_read_dir_entry", "trace_file_generic_read_dir_exit" },
+	{ "generic_file_llseek", CATEGORY_FILE, "trace_file_generic_file_llseek_entry", "trace_file_generic_file_llseek_exit" },
+	{ "cifs_dir_fsync", CATEGORY_FILE, "trace_file_dir_fsync_entry", "trace_file_dir_fsync_exit" },
+
+	/* Inode operations */
+	{ "cifs_create", CATEGORY_INODE, "trace_inode_create_entry", "trace_inode_create_exit" },
+	{ "cifs_atomic_open", CATEGORY_INODE, "trace_inode_atomic_open_entry", "trace_inode_atomic_open_exit" },
+	{ "cifs_lookup", CATEGORY_INODE, "trace_inode_lookup_entry", "trace_inode_lookup_exit" },
+	{ "cifs_getattr", CATEGORY_INODE, "trace_inode_getattr_entry", "trace_inode_getattr_exit" },
+	{ "cifs_unlink", CATEGORY_INODE, "trace_inode_unlink_entry", "trace_inode_unlink_exit" },
+	{ "cifs_hardlink", CATEGORY_INODE, "trace_inode_hardlink_entry", "trace_inode_hardlink_exit" },
+	{ "cifs_mkdir", CATEGORY_INODE, "trace_inode_mkdir_entry", "trace_inode_mkdir_exit" },
+	{ "cifs_rmdir", CATEGORY_INODE, "trace_inode_rmdir_entry", "trace_inode_rmdir_exit" },
+	{ "cifs_rename2", CATEGORY_INODE, "trace_inode_rename2_entry", "trace_inode_rename2_exit" },
+	{ "cifs_permission", CATEGORY_INODE, "trace_inode_permission_entry", "trace_inode_permission_exit" },
+	{ "cifs_setattr", CATEGORY_INODE, "trace_inode_setattr_entry", "trace_inode_setattr_exit" },
+	{ "cifs_symlink", CATEGORY_INODE, "trace_inode_symlink_entry", "trace_inode_symlink_exit" },
+	{ "cifs_mknod", CATEGORY_INODE, "trace_inode_mknod_entry", "trace_inode_mknod_exit" },
+	{ "cifs_listxattr", CATEGORY_INODE, "trace_inode_listxattr_entry", "trace_inode_listxattr_exit" },
+	{ "cifs_get_acl", CATEGORY_INODE, "trace_inode_get_acl_entry", "trace_inode_get_acl_exit" },
+	{ "cifs_set_acl", CATEGORY_INODE, "trace_inode_set_acl_entry", "trace_inode_set_acl_exit" },
+	{ "cifs_fiemap", CATEGORY_INODE, "trace_inode_fiemap_entry", "trace_inode_fiemap_exit" },
+	{ "cifs_get_link", CATEGORY_INODE, "trace_inode_get_link_entry", "trace_inode_get_link_exit" },
+
+	/* Address space operations */
+	{ "cifs_read_folio", CATEGORY_ADSPACE, "trace_adspace_read_folio_entry", "trace_adspace_read_folio_exit" },
+	{ "cifs_readahead", CATEGORY_ADSPACE, "trace_adspace_readahead_entry", "trace_adspace_readahead_exit" },
+	{ "cifs_writepages", CATEGORY_ADSPACE, "trace_adspace_writepages_entry", "trace_adspace_writepages_exit" },
+	{ "cifs_write_begin", CATEGORY_ADSPACE, "trace_adspace_write_begin_entry", "trace_adspace_write_begin_exit" },
+	{ "cifs_write_end", CATEGORY_ADSPACE, "trace_adspace_write_end_entry", "trace_adspace_write_end_exit" },
+	{ "netfs_dirty_folio", CATEGORY_ADSPACE, "trace_adspace_dirty_folio_entry", "trace_adspace_dirty_folio_exit" },
+	{ "cifs_release_folio", CATEGORY_ADSPACE, "trace_adspace_release_folio_entry", "trace_adspace_release_folio_exit" },
+	{ "cifs_direct_io", CATEGORY_ADSPACE, "trace_adspace_direct_io_entry", "trace_adspace_direct_io_exit" },
+	{ "cifs_invalidate_folio", CATEGORY_ADSPACE, "trace_adspace_invalidate_folio_entry", "trace_adspace_invalidate_folio_exit" },
+	{ "cifs_launder_folio", CATEGORY_ADSPACE, "trace_adspace_launder_folio_entry", "trace_adspace_launder_folio_exit" },
+	{ "filemap_migrate_folio", CATEGORY_ADSPACE, "trace_adspace_migrate_folio_entry", "trace_adspace_migrate_folio_exit" },
+	{ "cifs_swap_activate", CATEGORY_ADSPACE, "trace_adspace_swap_activate_entry", "trace_adspace_swap_activate_exit" },
+	{ "cifs_swap_deactivate", CATEGORY_ADSPACE, "trace_adspace_swap_deactivate_entry", "trace_adspace_swap_deactivate_exit" },
+
+	/* Superblock operations */
+	{ "cifs_statfs", CATEGORY_SUPER, "trace_super_statfs_entry", "trace_super_statfs_exit" },
+	{ "cifs_alloc_inode", CATEGORY_SUPER, "trace_super_alloc_inode_entry", "trace_super_alloc_inode_exit" },
+	{ "cifs_write_inode", CATEGORY_SUPER, "trace_super_write_inode_entry", "trace_super_write_inode_exit" },
+	{ "cifs_free_inode", CATEGORY_SUPER, "trace_super_free_inode_entry", "trace_super_free_inode_exit" },
+	{ "cifs_drop_inode", CATEGORY_SUPER, "trace_super_drop_inode_entry", "trace_super_drop_inode_exit" },
+	{ "cifs_evict_inode", CATEGORY_SUPER, "trace_super_evict_inode_entry", "trace_super_evict_inode_exit" },
+	{ "cifs_show_devname", CATEGORY_SUPER, "trace_super_show_devname_entry", "trace_super_show_devname_exit" },
+	{ "cifs_show_options", CATEGORY_SUPER, "trace_super_show_options_entry", "trace_super_show_options_exit" },
+	{ "cifs_umount_begin", CATEGORY_SUPER, "trace_super_umount_begin_entry", "trace_super_umount_begin_exit" },
+	{ "cifs_freeze", CATEGORY_SUPER, "trace_super_freeze_entry", "trace_super_freeze_exit" },
+};
+
+#define NUM_CALLBACKS (sizeof(callback_registry) / sizeof(callback_registry[0]))
+
+static const char *category_names[] = {
+	[CATEGORY_FILE] = "FILE OPERATIONS",
+	[CATEGORY_INODE] = "INODE OPERATIONS",
+	[CATEGORY_ADSPACE] = "ADDRESS SPACE OPERATIONS",
+	[CATEGORY_SUPER] = "SUPERBLOCK OPERATIONS",
+};
+
+/* Callback tracking */
+#define MAX_CALLBACKS 256
+static char *selected_callbacks[MAX_CALLBACKS];
+static int num_selected_callbacks = 0;
+
 /* options */
 static pid_t target_pid = 0;
 static time_t duration = 0;
@@ -31,18 +144,21 @@ static bool super_ops = false;
 static __u64 min_lat_ms = 10;
 static bool csv = false;
 static bool verbose = false;
+static bool list_callbacks = false;
 
 const char *argp_program_version = "smbvfsslower 0.1";
 const char *argp_program_bug_address = "https://github.com/iovisor/bcc/tree/master/libbpf-tools";
 const char argp_program_doc[] =
 	"Trace slow VFS callbacks for SMB operations.\n"
 	"\n"
-	"Usage: smbvfsslower [-h] [-p PID] [-m MIN] [-d DURATION] [-j] [--inode] [--adspace] [--super] [--file]\n"
+	"Usage: smbvfsslower [-h] [-p PID] [-m MIN] [-d DURATION] [-j] [--inode] [--adspace] [--super] [--file] [--callback NAME]\n"
 	"\n"
 	"EXAMPLES:\n"
 	"    smbvfsslower 		               				# trace smb vfs callbacks slower than 10 ms\n"
 	"    smbvfsslower -p 1216			   				# trace smb vfs callbacks with PID 1216 only\n"
-	"    smbvfsslower -d 1 -j --inode --super		    # trace smb vfs callbacks for 1s with csv output, inode and superblock ops only\n";
+	"    smbvfsslower -d 1 -j --inode --super		    # trace smb vfs callbacks for 1s with csv output, inode and superblock ops only\n"
+	"    smbvfsslower --callback cifs_open --callback cifs_read  # trace only open and read callbacks\n"
+	"    smbvfsslower --list							# list all available VFS callbacks\n";
 
 static const struct argp_option opts[] = {
 	{ "csv", 'j', NULL, 0, "Output as csv" },
@@ -54,6 +170,8 @@ static const struct argp_option opts[] = {
 	{ "pid", 'p', "PID", 0, "Process ID to trace" },
 	{ "min", 'm', "MIN", 0, "Min latency to trace, in ms (default 10)" },
 	{ "verbose", 'v', NULL, 0, "Verbose debug output" },
+	{ "callback", 'c', "CALLBACK", 0, "Trace specific VFS callback (can be specified multiple times)" },
+	{ "list", 'l', NULL, 0, "List all available VFS callbacks" },
 	{ NULL, 'h', NULL, OPTION_HIDDEN, "Show the full help" },
 	{},
 };
@@ -103,6 +221,16 @@ static error_t parse_arg(int key, char *arg, struct argp_state *state)
 			argp_usage(state);
 		}
 		break;
+	case 'c':
+		if (num_selected_callbacks >= MAX_CALLBACKS) {
+			warn("Too many callbacks specified (max %d)\n", MAX_CALLBACKS);
+			return ARGP_ERR_UNKNOWN;
+		}
+		selected_callbacks[num_selected_callbacks++] = strdup(arg);
+		break;
+	case 'l':
+		list_callbacks = true;
+		break;
 	case 'h':
 		argp_state_help(state, stderr, ARGP_HELP_STD_HELP);
 		break;
@@ -119,9 +247,94 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
+static void list_all_callbacks(void)
+{
+	printf("Available VFS callbacks:\n\n");
+
+	enum callback_category last_category = -1;
+	int callbacks_in_line = 0;
+
+	for (size_t i = 0; i < NUM_CALLBACKS; i++) {
+		const struct callback_info *cb = &callback_registry[i];
+
+		/* Print category header when category changes */
+		if (cb->category != last_category) {
+			if (last_category != -1)
+				printf("\n");  /* End previous category */
+
+			printf("\n%s:\n  ", category_names[cb->category]);
+			callbacks_in_line = 0;
+			last_category = cb->category;
+		}
+
+		/* Print callback name */
+		printf("%s", cb->name);
+		callbacks_in_line++;
+
+		/* Add separator or newline for formatting */
+		if (i + 1 < NUM_CALLBACKS && callback_registry[i + 1].category == cb->category) {
+			printf(", ");
+			/* Wrap to next line after ~5 callbacks for readability */
+			if (callbacks_in_line >= 5) {
+				printf("\n  ");
+				callbacks_in_line = 0;
+			}
+		}
+	}
+
+	printf("\n\nUsage: smbvfsslower --callback <name> [--callback <name> ...]\n");
+}
+
 static void sig_int(int signo)
 {
 	exiting = 1;
+}
+
+/* Helper function to attach a specific callback by name */
+static int attach_specific_callback(struct smbvfsslower_bpf *obj, const char *callback_name)
+{
+	/* Find callback in registry */
+	const struct callback_info *cb = NULL;
+	for (size_t i = 0; i < NUM_CALLBACKS; i++) {
+		if (strcmp(callback_registry[i].name, callback_name) == 0) {
+			cb = &callback_registry[i];
+			break;
+		}
+	}
+
+	if (!cb) {
+		warn("Unknown callback: %s\n", callback_name);
+		warn("Use --list to see available callbacks\n");
+		return -1;
+	}
+
+	/* Attach entry and exit programs using program names from registry */
+	int err = 0;
+	struct bpf_program *entry_prog = bpf_object__find_program_by_name(obj->obj, cb->entry_prog);
+	struct bpf_program *exit_prog = bpf_object__find_program_by_name(obj->obj, cb->exit_prog);
+
+	if (!entry_prog || !exit_prog) {
+		warn("Failed to find BPF programs for callback %s\n", callback_name);
+		return -1;
+	}
+
+	/* Enable the programs for autoload */
+	bpf_program__set_autoload(entry_prog, true);
+	bpf_program__set_autoload(exit_prog, true);
+
+	err = bpf_program__set_attach_target(entry_prog, 0, callback_name);
+	if (err) {
+		warn("Failed to set attach target for %s entry: %d\n", callback_name, err);
+		return err;
+	}
+
+	err = bpf_program__set_attach_target(exit_prog, 0, callback_name);
+	if (err) {
+		warn("Failed to set attach target for %s exit: %d\n", callback_name, err);
+		return err;
+	}
+
+	return 0;
 }
 
 static int file_fentry_set_attach_target(struct smbvfsslower_bpf *obj)
@@ -873,32 +1086,38 @@ static void print_headers()
 
 	printf("Tracing SMB VFS callbacks for: ");
 
-	if (file_ops)
-		printf("file operations, ");
+	if (num_selected_callbacks > 0) {
+		printf("specific callbacks [");
+		for (int i = 0; i < num_selected_callbacks; i++) {
+			printf("%s%s", selected_callbacks[i], 
+			       i < num_selected_callbacks - 1 ? ", " : "");
+		}
+		printf("], ");
+	} else {
+		if (file_ops)
+			printf("file operations, ");
 
-	if (inode_ops)
-		printf("inode operations, ");
+		if (inode_ops)
+			printf("inode operations, ");
 
-	if (adspace_ops)
-		printf("address space operations, ");
+		if (adspace_ops)
+			printf("address space operations, ");
 
-	if (super_ops)
-		printf("superblock operations, ");
+		if (super_ops)
+			printf("superblock operations, ");
+	}
 
 	if (target_pid)
 		printf("PID=%d, ", target_pid);
 
-	if (min_lat_ms)
-		printf("latency more than %llu ms... ", min_lat_ms);
-	else
-		printf("latency more 10 ms... ");
+	printf("latency more than %llu ms... ", min_lat_ms);
 
 	if (duration)
 		printf(" for %ld secs.\n", duration);
 	else
 		printf("Hit Ctrl-C to end.\n");
 
-	printf("%-10s %-20s %-7s %-10s %-25s %-7s\n", "ENDTIME", "TASK", "PID", "TYPE", "FUNCTION",
+	printf("%-15s %-20s %-7s %-10s %-25s %-7s\n", "ENDTIME", "TASK", "PID", "TYPE", "FUNCTION",
 	       "LATENCY(ms)");
 }
 
@@ -908,6 +1127,7 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 	struct tm *tm;
 	char ts[32];
 	time_t t;
+	struct timeval tv;
 
 	if (data_sz < sizeof(e)) {
 		printf("Error: packet too small\n");
@@ -924,11 +1144,13 @@ static void handle_event(void *ctx, int cpu, void *data, __u32 data_sz)
 		return;
 	}
 
-	time(&t);
+	gettimeofday(&tv, NULL);
+	t = tv.tv_sec;
 	tm = localtime(&t);
 	strftime(ts, sizeof(ts), "%H:%M:%S", tm);
+	snprintf(ts + strlen(ts), sizeof(ts) - strlen(ts), ".%06ld", tv.tv_usec);
 
-	printf("%-10s %-20s %-7ld %-10s %-25s %-7.3f\n", ts, e.task, e.pid, e.type, e.function,
+	printf("%-15s %-20s %-7ld %-10s %-25s %-7.3f\n", ts, e.task, e.pid, e.type, e.function,
 	       (double)e.delta_us / 1000);
 }
 
@@ -952,6 +1174,15 @@ static void handle_lost_events(void *ctx, int cpu, __u64 lost_cnt)
 	warn("lost %llu events on CPU #%d\n", lost_cnt, cpu);
 }
 
+/* Helper to disable all programs when using individual callback selection */
+static void disable_all_programs(struct smbvfsslower_bpf *obj)
+{
+	file_fentry_disable_target(obj);
+	inode_fentry_disable_attach_target(obj);
+	super_fentry_disable_target(obj);
+	adspace_fentry_disable_target(obj);
+}
+
 int main(int argc, char **argv)
 {
 	LIBBPF_OPTS(bpf_object_open_opts, open_opts);
@@ -969,6 +1200,12 @@ int main(int argc, char **argv)
 	if (err)
 		return err;
 
+	/* Handle --list option */
+	if (list_callbacks) {
+		list_all_callbacks();
+		return 0;
+	}
+
 	libbpf_set_print(libbpf_print_fn);
 
 	skel = smbvfsslower_bpf__open_opts(&open_opts);
@@ -980,50 +1217,69 @@ int main(int argc, char **argv)
 	skel->rodata->target_pid = target_pid;
 	skel->rodata->min_lat_ns = min_lat_ms * 1000 * 1000;
 
-	// conditional attachment: disable rest of the probes
-	if (!file_ops && !inode_ops && !adspace_ops && !super_ops) {
-		warn("No operations selected. Try 'smbvfsslower --help'\n");
-		goto cleanup;
-	}
+	// Handle individual callback selection
+	if (num_selected_callbacks > 0) {
+		/* Disable all programs first */
+		disable_all_programs(skel);
 
-	if (file_ops) {
-		err = file_fentry_set_attach_target(skel);
-		if (err) {
-			warn("failed to set (file) attach target: %d\n", err);
+		/* Then enable only selected callbacks */
+		for (int i = 0; i < num_selected_callbacks; i++) {
+			err = attach_specific_callback(skel, selected_callbacks[i]);
+			if (err) {
+				warn("failed to attach callback '%s': %d\n", selected_callbacks[i], err);
+				goto cleanup;
+			}
+			if (verbose)
+				printf("Attached to callback: %s\n", selected_callbacks[i]);
+		}
+	}
+	// Handle category-based selection (original behavior)
+	else {
+		// conditional attachment: disable rest of the probes
+		if (!file_ops && !inode_ops && !adspace_ops && !super_ops) {
+			warn("No operations selected. Try 'smbvfsslower --help'\n");
 			goto cleanup;
 		}
-	} else {
-		file_fentry_disable_target(skel);
-	}
 
-	if (inode_ops) {
-		err = inode_fentry_set_attach_target(skel);
-		if (err) {
-			warn("failed to set (inode) attach target: %d\n", err);
-			goto cleanup;
+		if (file_ops) {
+			err = file_fentry_set_attach_target(skel);
+			if (err) {
+				warn("failed to set (file) attach target: %d\n", err);
+				goto cleanup;
+			}
+		} else {
+			file_fentry_disable_target(skel);
 		}
-	} else {
-		inode_fentry_disable_attach_target(skel);
-	}
 
-	if (adspace_ops) {
-		err = super_fentry_set_attach_target(skel);
-		if (err) {
-			warn("failed to set (super) attach target: %d\n", err);
-			goto cleanup;
+		if (inode_ops) {
+			err = inode_fentry_set_attach_target(skel);
+			if (err) {
+				warn("failed to set (inode) attach target: %d\n", err);
+				goto cleanup;
+			}
+		} else {
+			inode_fentry_disable_attach_target(skel);
 		}
-	} else {
-		adspace_fentry_disable_target(skel);
-	}
 
-	if (super_ops) {
-		err = adspace_fentry_set_attach_target(skel);
-		if (err) {
-			warn("failed to set (address space) attach target: %d\n", err);
-			goto cleanup;
+		if (adspace_ops) {
+			err = super_fentry_set_attach_target(skel);
+			if (err) {
+				warn("failed to set (super) attach target: %d\n", err);
+				goto cleanup;
+			}
+		} else {
+			adspace_fentry_disable_target(skel);
 		}
-	} else {
-		super_fentry_disable_target(skel);
+
+		if (super_ops) {
+			err = adspace_fentry_set_attach_target(skel);
+			if (err) {
+				warn("failed to set (address space) attach target: %d\n", err);
+				goto cleanup;
+			}
+		} else {
+			super_fentry_disable_target(skel);
+		}
 	}
 
 	err = smbvfsslower_bpf__load(skel);
@@ -1085,6 +1341,11 @@ int main(int argc, char **argv)
 cleanup:
 	perf_buffer__free(pb);
 	smbvfsslower_bpf__destroy(skel);
+
+	/* Free allocated callback names */
+	for (int i = 0; i < num_selected_callbacks; i++) {
+		free(selected_callbacks[i]);
+	}
 
 	return err != 0;
 }
