@@ -411,9 +411,9 @@ dependencies = [
 
 [[package]]
 name = "libbpf-rs"
-version = "0.26.0"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c7c1017b506e5cbc007f65abb78b21bd5957dff9358882427ddbf634ba415b"
+checksum = "fd8e8db46a2d5967b5b3dba7aba32a875dc38f222395040607045635ec1f9b63"
 dependencies = [
  "bitflags 2.5.0",
  "libbpf-sys",
@@ -423,20 +423,20 @@ dependencies = [
 
 [[package]]
 name = "libbpf-sys"
-version = "1.6.3+v1.6.3"
+version = "1.7.0+v1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95f55336f7dbde4fbbaae7b5e271f9efc65bf1d0b69c6fcb1e5026a385e95f70"
+checksum = "a109478760b2900aa2a6f2087e9d0de1d9c535b1758602af2845d5d2ccfaed7c"
 dependencies = [
  "cc",
- "nix 0.31.1",
+ "nix 0.31.2",
  "pkg-config",
 ]
 
 [[package]]
 name = "libc"
-version = "0.2.180"
+version = "0.2.184"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
+checksum = "48f5d2a454e16a5ea0f4ced81bd44e4cfc7bd3a507b61887c99fd3538b28e4af"
 
 [[package]]
 name = "linux-raw-sys"
@@ -516,9 +516,9 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.31.1"
+version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225e7cfe711e0ba79a68baeddb2982723e4235247aefce1482f2f16c27865b66"
+checksum = "5d6d0705320c1e6ba1d912b5e37cf18071b6c2e9b7fa8215a1e8a7651966f5d3"
 dependencies = [
  "bitflags 2.5.0",
  "cfg-if",
@@ -567,9 +567,9 @@ checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 
 [[package]]
 name = "pkg-config"
-version = "0.3.30"
+version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
+checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plain"
@@ -617,7 +617,7 @@ dependencies = [
  "blazesym",
  "clap 4.5.26",
  "libbpf-cargo",
- "libbpf-rs 0.26.0",
+ "libbpf-rs 0.26.2",
  "libc",
  "nix 0.29.0",
  "tracing",
@@ -906,7 +906,7 @@ dependencies = [
  "anyhow",
  "ctrlc",
  "libbpf-cargo",
- "libbpf-rs 0.26.0",
+ "libbpf-rs 0.26.2",
  "libc",
  "object",
  "plain",
@@ -1147,7 +1147,7 @@ dependencies = [
  "anyhow",
  "ctrlc",
  "libbpf-cargo",
- "libbpf-rs 0.26.0",
+ "libbpf-rs 0.26.2",
  "libc",
  "structopt",
 ]
