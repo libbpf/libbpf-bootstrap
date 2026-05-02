@@ -49,6 +49,10 @@ int socket_handler(struct __sk_buff *skb)
 	if (!e)
 		return 0;
 
+	/* zero out buffer to avoid leaking prior record bytes (the GRE
+	 * branch below skips writing src_addr/dst_addr) */
+	__builtin_memset(e, 0, sizeof(*e));
+
 	bpf_skb_load_bytes(skb, nhoff + offsetof(struct iphdr, protocol), &e->ip_proto, 1);
 
 	if (e->ip_proto != IPPROTO_GRE) {

@@ -45,6 +45,9 @@ int handle_exec(struct trace_event_raw_sched_process_exec *ctx)
 	if (!e)
 		return 0;
 
+	/* zero out buffer to avoid leaking prior record bytes */
+	__builtin_memset(e, 0, sizeof(*e));
+
 	/* fill out the sample with data */
 	task = (struct task_struct *)bpf_get_current_task();
 
@@ -94,6 +97,9 @@ int handle_exit(struct trace_event_raw_sched_process_template *ctx)
 	e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
 	if (!e)
 		return 0;
+
+	/* zero out buffer to avoid leaking prior record bytes */
+	__builtin_memset(e, 0, sizeof(*e));
 
 	/* fill out the sample with data */
 	task = (struct task_struct *)bpf_get_current_task();

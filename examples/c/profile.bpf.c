@@ -14,6 +14,13 @@ struct {
 	__uint(max_entries, 256 * 1024);
 } events SEC(".maps");
 
+/* zero out buffer (manual byte loop, struct is too big for inline memset) */
+static __noinline void zero_buf(void *p, __u64 sz)
+{
+	for (__u64 i = 0; i < sz; i++)
+		*(volatile char *)((char *)p + i) = 0;
+}
+
 SEC("perf_event")
 int profile(void *ctx)
 {
@@ -25,6 +32,10 @@ int profile(void *ctx)
 	event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
 	if (!event)
 		return 1;
+
+	/* zero out buffer to avoid leaking prior record bytes (kstack/ustack
+	 * tail past *_sz is only partially written by bpf_get_stack) */
+	zero_buf(event, sizeof(*event));
 
 	event->pid = pid;
 	event->cpu_id = cpu_id;
