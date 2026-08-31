@@ -118,7 +118,11 @@ foreach(app ${apps})
   get_filename_component(app_stem ${app} NAME_WE)
 
   # Build object skeleton and depend skeleton on libbpf build
-  bpf_object(${app_stem} ${app_stem}.bpf.c)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${app_stem}.h")
+    bpf_object(${app_stem} ${app_stem}.bpf.c ${app_stem}.h)
+  else()
+    bpf_object(${app_stem} ${app_stem}.bpf.c)
+  endif()
   add_dependencies(${app_stem}_skel libbpf bpftool)
 
   add_executable(${app_stem} ${app_stem}.c)
