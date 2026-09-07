@@ -411,9 +411,9 @@ dependencies = [
 
 [[package]]
 name = "libbpf-rs"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e69ad90c37d14f657291712f297a1460a1d1b647da45e0e372996b807c38f02"
+checksum = "e31aef1b2b743b2ebcc8eded144207c0f05c2d59e2d8c1d40dfa65f59437b60f"
 dependencies = [
  "bitflags 2.5.0",
  "libbpf-sys",
@@ -617,7 +617,7 @@ dependencies = [
  "blazesym",
  "clap 4.5.26",
  "libbpf-cargo",
- "libbpf-rs 0.27.0",
+ "libbpf-rs 0.27.1",
  "libc",
  "nix 0.29.0",
  "tracing",
@@ -906,7 +906,7 @@ dependencies = [
  "anyhow",
  "ctrlc",
  "libbpf-cargo",
- "libbpf-rs 0.27.0",
+ "libbpf-rs 0.27.1",
  "libc",
  "object",
  "plain",
@@ -1147,7 +1147,7 @@ dependencies = [
  "anyhow",
  "ctrlc",
  "libbpf-cargo",
- "libbpf-rs 0.27.0",
+ "libbpf-rs 0.27.1",
  "libc",
  "structopt",
 ]
