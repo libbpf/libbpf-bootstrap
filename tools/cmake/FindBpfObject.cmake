@@ -45,8 +45,9 @@ as the associated dependencies.
 
 Given an abstract ``<name>`` for a BPF object and the associated ``<source>``
 file, generates an interface library target, ``<name>_skel``, that may be
-linked against by other cmake targets. Additional headers may be provided to 
-the macro to ensure that the generated skeleton is up-to-date.
+linked against by other cmake targets. Additional headers may be provided to
+the macro to ensure that the generated skeleton is up-to-date when the
+selected CMake generator does not support compiler-generated dependency files.
 
 Example Usage:
 
@@ -164,14 +165,28 @@ macro(bpf_object name input)
   set(BPF_SKEL_FILE ${CMAKE_CURRENT_BINARY_DIR}/${name}.skel.h)
   set(OUTPUT_TARGET ${name}_skel)
 
+  # CMake supports DEPFILE with Ninja since 3.7 and with Makefile generators
+  # since 3.20. Keep the explicit dependencies below for older CMake versions
+  # and generators that do not support depfiles.
+  set(BPF_DEPFILE_ARGS)
+  set(BPF_DEPFILE_CLANG_ARGS)
+  if(CMAKE_GENERATOR MATCHES "Ninja" OR
+     (CMAKE_GENERATOR MATCHES "Makefiles" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.20"))
+    set(BPF_DEP_FILE ${BPF_O_FILE}.d)
+    set(BPF_DEPFILE_ARGS DEPFILE ${BPF_DEP_FILE})
+    set(BPF_DEPFILE_CLANG_ARGS -MD -MF ${BPF_DEP_FILE} -MT ${BPF_O_FILE})
+  endif()
+
   # Build BPF object file
   add_custom_command(OUTPUT ${BPF_O_FILE}
     COMMAND ${BPFOBJECT_CLANG_EXE} -g -O2 -target bpf -D__TARGET_ARCH_${ARCH}
             ${CLANG_SYSTEM_INCLUDES} -I${GENERATED_VMLINUX_DIR}
-            -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
+            -isystem ${LIBBPF_INCLUDE_DIRS} ${BPF_DEPFILE_CLANG_ARGS}
+            -c ${BPF_C_FILE} -o ${BPF_O_FILE}
     COMMAND_EXPAND_LISTS
     VERBATIM
     DEPENDS ${BPF_C_FILE} ${BPF_H_FILES} ${BPFOBJECT_VMLINUX_H}
+    ${BPF_DEPFILE_ARGS}
     COMMENT "[clang] Building BPF object: ${name}")
 
   # Build BPF skeleton header
