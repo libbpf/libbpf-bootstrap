@@ -81,8 +81,7 @@ if(NOT BPFOBJECT_CLANG_EXE)
       list(GET CLANG_VERSION_LIST 0 CLANG_VERSION_MAJOR)
 
       # Anything older than clang 10 doesn't really work
-      string(COMPARE LESS ${CLANG_VERSION_MAJOR} 10 CLANG_VERSION_MAJOR_LT10)
-      if(${CLANG_VERSION_MAJOR_LT10})
+      if(CLANG_VERSION_MAJOR LESS 10)
         message(FATAL_ERROR "clang ${CLANG_VERSION} is too old for BPF CO-RE")
       endif()
 
