@@ -16,12 +16,12 @@ jobs:
       matrix:
         llvm: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Build container (20.04)
       if: ${{ matrix.llvm < 14 }}
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v7
       with:
         push: false
         build-args: |
@@ -32,7 +32,7 @@ jobs:
         tags: build_container
     - name: Build container (22.04)
       if: ${{ matrix.llvm >= 14 }}
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v7
       with:
         push: false
         build-args: |
