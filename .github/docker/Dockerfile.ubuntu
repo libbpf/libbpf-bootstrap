@@ -7,6 +7,7 @@ ENV LLVM_VERSION=$LLVM_VERSION
 ARG SHORTNAME="jammy"
 ENV SHORTNAME=$SHORTNAME
 
+RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
 RUN apt-get update && apt-get install -y curl gnupg
 RUN if [ "${LLVM_VERSION}" = "21" ]; \
     then \
@@ -20,7 +21,9 @@ deb http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME}-${LLVM_VERSION
 deb-src http://apt.llvm.org/${SHORTNAME}/ llvm-toolchain-${SHORTNAME}-${LLVM_VERSION} main\n\
 "  >> /etc/apt/sources.list; \
     fi
-RUN curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+RUN curl -fsSL --retry 5 --retry-connrefused --retry-delay 5 \
+         -o /tmp/llvm-snapshot.gpg.key https://apt.llvm.org/llvm-snapshot.gpg.key && \
+    apt-key add /tmp/llvm-snapshot.gpg.key
 
 ARG DEBIAN_FRONTEND="noninteractive"
 ENV TZ="Etc/UTC"
